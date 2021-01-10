@@ -1,8 +1,8 @@
 # wiki - Get summary information on a topic from Wikipedia
 
 ## Todos
-[ ] - Accept one argument that will map to a Wikipedia article
-[ ] - Use `curl` to retrieve the article and output to stdout
+[X] - Accept one argument that will map to a Wikipedia article
+[X] - Use `curl` to retrieve the article and output to stdout
 [ ] - Limit output to first sentence
 [ ] - Grab section headings from `curl` result and output to stdout
 [ ] - Add support for multiple args to output the first sentence of a specified section and a list of subsection headings

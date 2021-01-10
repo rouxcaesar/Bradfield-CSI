@@ -1,0 +1,12 @@
+#!/bin/bash
+
+SUBJECT=${1}
+
+echo "###################################"
+echo "Subject: $SUBJECT"
+echo "###################################"
+
+ARTICLE=$(curl --location https://en.wikipedia.org/wiki/$SUBJECT)
+
+echo "###################################"
+echo "$ARTICLE" | head -n 5
