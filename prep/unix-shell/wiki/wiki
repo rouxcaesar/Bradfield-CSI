@@ -7,11 +7,16 @@ echo "###################################"
 echo -e "Subject: $SUBJECT \n"
 
 # Get the webpage for the Wikipedia article.
-ARTICLE=$(curl --location https://en.wikipedia.org/wiki/$SUBJECT)
+#ARTICLE=$(curl --location https://en.wikipedia.org/wiki/$SUBJECT)
 
 # Limit output for easier  debugging.
 echo "###################################"
-echo "$ARTICLE" | head -n 7
+#echo "$ARTICLE" | head -n 7
+
+# Look up how to suppress metrics and error messages from curl so that they are not output by the script.
+FIRST_SENTENCE=$(curl --location https://en.wikipedia.org/wiki/$SUBJECT | grep "walrus" | head -n 5 | grep "<p>" | head -n 1 | cut -d'.' -f1)
+echo "$FIRST_SENTENCE"
+echo ""
 
 
 # Grab list of first level section headings and output them.
