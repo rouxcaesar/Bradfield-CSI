@@ -1,12 +1,21 @@
 #!/bin/bash
 
+# Grab the first argument which is the title of the article.
 SUBJECT=${1}
 
 echo "###################################"
-echo "Subject: $SUBJECT"
-echo "###################################"
+echo -e "Subject: $SUBJECT \n"
 
+# Get the webpage for the Wikipedia article.
 ARTICLE=$(curl --location https://en.wikipedia.org/wiki/$SUBJECT)
 
+# Limit output for easier  debugging.
 echo "###################################"
-echo "$ARTICLE" | head -n 5
+echo "$ARTICLE" | head -n 7
+
+
+# Grab list of first level section headings and output them.
+echo "###################################"
+echo -e "Contents:\n"
+SECTION_HEADINGS=$(grep -n "toclevel-1" walrus.html | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
+echo "$SECTION_HEADINGS"
