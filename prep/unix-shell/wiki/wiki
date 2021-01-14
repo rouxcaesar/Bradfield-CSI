@@ -3,24 +3,20 @@
 # Grab the first argument which is the title of the article.
 SUBJECT=${1}
 
-echo "###################################"
-echo -e "Subject: $SUBJECT \n"
+# Get the webpage for the Wikipedia article and store output in a variable.
+ARTICLE=$(curl -s --location https://en.wikipedia.org/wiki/$SUBJECT)
 
-# Get the webpage for the Wikipedia article.
-#ARTICLE=$(curl --location https://en.wikipedia.org/wiki/$SUBJECT)
+# Process part of the article to get the first sentence.
+FIRST_SENTENCE=$(echo "$ARTICLE" | grep "$SUBJECT" | head -n 5 | grep "<p>" | head -n 1 | cut -d'.' -f1)
+PLAIN_SENTENCE=$(echo "$FIRST_SENTENCE" | sed -E $'s/>/#\\\n/g' | sed -E $'s/</\\\n#/g' | grep -v "#" | tr -d '\n')
 
-# Limit output for easier  debugging.
-echo "###################################"
-#echo "$ARTICLE" | head -n 7
+# Grab list of first level section headings.
+SECTION_HEADINGS=$(echo "$ARTICLE" |  grep -n "toclevel-1" | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
 
-# Look up how to suppress metrics and error messages from curl so that they are not output by the script.
-FIRST_SENTENCE=$(curl --location https://en.wikipedia.org/wiki/$SUBJECT | grep "walrus" | head -n 5 | grep "<p>" | head -n 1 | cut -d'.' -f1)
-echo "$FIRST_SENTENCE"
+# Output to the user.
 echo ""
-
-
-# Grab list of first level section headings and output them.
-echo "###################################"
+echo "${PLAIN_SENTENCE}."
+echo ""
 echo -e "Contents:\n"
-SECTION_HEADINGS=$(grep -n "toclevel-1" walrus.html | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
 echo "$SECTION_HEADINGS"
+echo ""
