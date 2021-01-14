@@ -9,6 +9,8 @@
 
 [X] - Grab section headings from `curl` result and output to stdout
 
+[ ] - Handle case of first argument being a quoted string (Ex: wiki "george washington")
+
 [ ] - Add support for multiple args to output the first sentence of a specified section and a list of subsection headings
 
 ### Stretch goals

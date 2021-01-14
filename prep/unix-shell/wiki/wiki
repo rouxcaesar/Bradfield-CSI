@@ -2,6 +2,13 @@
 
 # Grab the first argument which is the title of the article.
 SUBJECT=${1}
+echo "Subject: $SUBJECT"
+echo ""
+
+# Translate input into format expected by Wikipedia for whitespace delimited topics like "cold brew" or "George Washington".
+NEW_SUBJECT=$(echo "$SUBJECT" | tr ' ' '_')
+echo "New Subject: $NEW_SUBJECT"
+echo ""
 
 # Get the webpage for the Wikipedia article and store output in a variable.
 ARTICLE=$(curl -s --location https://en.wikipedia.org/wiki/$SUBJECT)
@@ -14,7 +21,6 @@ PLAIN_SENTENCE=$(echo "$FIRST_SENTENCE" | sed -E $'s/>/#\\\n/g' | sed -E $'s/</\
 SECTION_HEADINGS=$(echo "$ARTICLE" |  grep -n "toclevel-1" | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
 
 # Output to the user.
-echo ""
 echo "${PLAIN_SENTENCE}."
 echo ""
 echo -e "Contents:\n"
