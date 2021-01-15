@@ -18,6 +18,8 @@
 
 [ ] - Add a flag to support querying multipl pages in parallel; could show each page after the other with a line of charaters to separate the pages; use `xargs` for parallelism (?) and store output as vars in an array, then once done querying output array values one at a time (?)
 
+[ ] - Refactor script to leverage "strict mode": http://redsymbol.net/articles/unofficial-bash-strict-mode/
+
 ## TL;DR
 
 `wiki` is a Bash program that will output summary information on the topic you provide it. The output includes:
