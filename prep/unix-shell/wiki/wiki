@@ -42,8 +42,19 @@ if [[ -z "$SUB_SECTION"  ]]; then
   exit 0
 else
 # If false, fetch first sentence of specified section and list of subsections.
+  echo -e "Working on providing subsection!\n"
+  echo "Requested Sub-Section: $SUB_SECTION"
 
-echo -e "Working on providing subsection!\n"
-exit 0
+  # Process first sentence of sub-section.
+
+
+  # Grab list of second level section headings.
+  #SUB_SECTION_HEADINGS=$(echo "$ARTICLE" |  grep -n "toclevel-1" | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
+
+  SECTION_TOC_NUMBER=$(echo "$ARTICLE" | sed -n '/<div id="toc" class="toc"/,/<\/div>/p' | grep -i "$SUB_SECTION" | sed -E $'s/>/#\\\n/g' | sed -E $'s/</\\\n#/g' | grep -v "#" | grep -Ei "[^a-z]" | tr -d '\n' | tr -d ' ')
+  echo "Section TOC Number: $SECTION_TOC_NUMBER"
+  echo ""
+
+  exit 0
 fi
 
