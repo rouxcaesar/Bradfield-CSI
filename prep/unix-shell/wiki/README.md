@@ -11,7 +11,7 @@
 
 [ ] - Handle case of first argument being a quoted string (Ex: wiki "george washington")
 
-[ ] - Add support for multiple args to output the first sentence of a specified section and a list of subsection headings
+[ ] - Add support for multiple args to output the first sentence of a specified section and a list of subsection headings; Ex: ./wiki walrus anatomy OR ./wiki walrus life_history -> stretch goal: take in input like "life history" and convert to life_history
 
 ### Stretch goals
 [ ] - Add support for tab completion
