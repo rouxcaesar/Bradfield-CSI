@@ -45,8 +45,8 @@ if [[ -z "$SUB_SECTION"  ]]; then
   exit 0
 else
 # If false, fetch first sentence of specified section and list of subsections.
-  echo -e "Working on providing subsection!\n"
-  echo "Requested Sub-Section: $SUB_SECTION"
+  echo -e "Working on providing first sentence of sub-section!\n"
+  #echo "Requested Sub-Section: $SUB_SECTION"
 
   # Process first sentence of sub-section.
 
@@ -55,12 +55,12 @@ else
   #SUB_SECTION_HEADINGS=$(echo "$ARTICLE" |  grep -n "toclevel-1" | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
 
   SECTION_TOC_NUMBER=$(echo "$ARTICLE" | sed -n '/<div id="toc" class="toc"/,/<\/div>/p' | grep -i "$SUB_SECTION" | sed -E $'s/>/#\\\n/g' | sed -E $'s/</\\\n#/g' | grep -v "#" | grep -Eiv "[a-z]" | tr -d '\n' | tr -d ' ')
-  echo "Section TOC Number: $SECTION_TOC_NUMBER"
-  echo ""
-
-  SUB_SECTIONS=$(echo "$ARTICLE" | sed -n '/<div id="toc" class="toc"/,/<\/div>/p')
-  #echo  "$SUB_SECTIONS"
+  #echo "Section TOC Number: $SECTION_TOC_NUMBER"
   #echo ""
+
+  SUB_SECTIONS=$(echo "$ARTICLE" | sed -n '/<div id="toc" class="toc"/,/<\/div>/p' | grep "tocnumber\">$SECTION_TOC_NUMBER\." | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
+  echo  "$SUB_SECTIONS"
+  echo ""
 
   exit 0
 fi
