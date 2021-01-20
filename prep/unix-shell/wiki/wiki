@@ -4,8 +4,8 @@
 # {} is used for parameter expansion: https://superuser.com/questions/935374/difference-between-and-in-shell-script
 SUBJECT=${1}
 SUB_SECTION=${2}
-#echo "Subject: $SUBJECT"
-#echo "Sub-Section: $SUB_SECTION"
+echo "Subject: $SUBJECT"
+echo "Sub-Section: $SUB_SECTION"
 echo ""
 
 # Translate input into format expected by Wikipedia for whitespace delimited topics like "cold brew" or "George Washington".
@@ -36,11 +36,9 @@ if [[ -z "$SUB_SECTION"  ]]; then
   SECTION_HEADINGS=$(echo "$ARTICLE" |  grep -n "toclevel-1" | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
   
   # Output to the user.
-  echo "${PLAIN_SENTENCE}."
-  echo ""
-  echo -e "Contents:\n"
-  echo "$SECTION_HEADINGS"
-  echo ""
+  echo -e "${PLAIN_SENTENCE}.\n"
+  echo -e "Section Headings:\n"
+  echo -e "${SECTION_HEADINGS}\n"
   
   exit 0
 else
@@ -49,18 +47,24 @@ else
   #echo "Requested Sub-Section: $SUB_SECTION"
 
   # Process first sentence of sub-section.
-
+  FIRST_SUB_SECTION_SENTENCE=$(echo "$ARTICLE" | sed -n '/id="$SUB_SECTION"/,/<\/p>/p' | sed -n '/<p>/,/<\/p>/p' | cut -d'.' -f1 | sed -E $'s/>/~\\\n/g' | sed -E $'s/</\\\n~/g' | sed -n '1,/~\/p~/p' | grep -v '~' | tr -d '\n')
+  echo -e "${FIRST_SUB_SECTION_SENTENCE}.\n"
 
   # Grab list of second level section headings.
   #SUB_SECTION_HEADINGS=$(echo "$ARTICLE" |  grep -n "toclevel-1" | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
 
   SECTION_TOC_NUMBER=$(echo "$ARTICLE" | sed -n '/<div id="toc" class="toc"/,/<\/div>/p' | grep -i "$SUB_SECTION" | sed -E $'s/>/#\\\n/g' | sed -E $'s/</\\\n#/g' | grep -v "#" | grep -Eiv "[a-z]" | tr -d '\n' | tr -d ' ')
-  #echo "Section TOC Number: $SECTION_TOC_NUMBER"
-  #echo ""
-
-  SUB_SECTIONS=$(echo "$ARTICLE" | sed -n '/<div id="toc" class="toc"/,/<\/div>/p' | grep "tocnumber\">$SECTION_TOC_NUMBER\." | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
-  echo  "$SUB_SECTIONS"
+  echo "Section TOC Number: $SECTION_TOC_NUMBER"
   echo ""
+
+  SUB_SECTIONS_HEADINGS=$(echo "$ARTICLE" | sed -n '/<div id="toc" class="toc"/,/<\/div>/p' | grep "tocnumber\">$SECTION_TOC_NUMBER\." | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
+
+  if [[ ! -z "$SUB_SECTIONS_HEADINGS" ]]; then
+    echo -e "Subsection Headings:\n"
+    echo -e  "$SUB_SECTIONS_HEADINGS\n"
+  else
+    echo -e "No subsections under $SUB_SECTION\n"
+  fi
 
   exit 0
 fi
