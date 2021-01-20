@@ -47,7 +47,10 @@ else
   #echo "Requested Sub-Section: $SUB_SECTION"
 
   # Process first sentence of sub-section.
-  FIRST_SUB_SECTION_SENTENCE=$(echo "$ARTICLE" | sed -n '/id="$SUB_SECTION"/,/<\/p>/p' | sed -n '/<p>/,/<\/p>/p' | cut -d'.' -f1 | sed -E $'s/>/~\\\n/g' | sed -E $'s/</\\\n~/g' | sed -n '1,/~\/p~/p' | grep -v '~' | tr -d '\n')
+  FIRST_SUB_SECTION_LETTER=$(echo "$SUB_SECTION" | cut -c1 | tr "[:lower:]" "[:upper:]")
+  LOWER_CASE_SUB_SECTION_LETTERS=$(echo "$SUB_SECTION" | cut -c2-)
+  UPPERCASE_SUB_SECTION=$(echo "$FIRST_SUB_SECTION_LETTER""$LOWER_CASE_SUB_SECTION_LETTERS")
+  FIRST_SUB_SECTION_SENTENCE=$(echo "$ARTICLE" | sed -n "/id=\"$UPPERCASE_SUB_SECTION\"/,/<\/p>/p" | sed -n '/<p>/,/<\/p>/p' | cut -d'.' -f1 | sed -E $'s/>/~\\\n/g' | sed -E $'s/</\\\n~/g' | sed -n '1,/~\/p~/p' | grep -v '~' | tr -d '\n')
   echo -e "${FIRST_SUB_SECTION_SENTENCE}.\n"
 
   # Grab list of second level section headings.
