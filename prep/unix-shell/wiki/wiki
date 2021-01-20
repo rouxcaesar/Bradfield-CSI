@@ -47,6 +47,8 @@ else
   #echo "Requested Sub-Section: $SUB_SECTION"
 
   # Process first sentence of sub-section.
+  # Current logic has issues if there are periods in the first sentence that are not used to end the sentence.
+  # Ex: "J.R.R. Tolkien" is present in the first sentence of the "Etymology" section of the Walrus article and it's causing the logic to select and output only the first part of the first sentence.
   FIRST_SUB_SECTION_LETTER=$(echo "$SUB_SECTION" | cut -c1 | tr "[:lower:]" "[:upper:]")
   LOWER_CASE_SUB_SECTION_LETTERS=$(echo "$SUB_SECTION" | cut -c2-)
   UPPERCASE_SUB_SECTION=$(echo "$FIRST_SUB_SECTION_LETTER""$LOWER_CASE_SUB_SECTION_LETTERS")
@@ -54,12 +56,7 @@ else
   echo -e "${FIRST_SUB_SECTION_SENTENCE}.\n"
 
   # Grab list of second level section headings.
-  #SUB_SECTION_HEADINGS=$(echo "$ARTICLE" |  grep -n "toclevel-1" | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
-
   SECTION_TOC_NUMBER=$(echo "$ARTICLE" | sed -n '/<div id="toc" class="toc"/,/<\/div>/p' | grep -i "$SUB_SECTION" | sed -E $'s/>/#\\\n/g' | sed -E $'s/</\\\n#/g' | grep -v "#" | grep -Eiv "[a-z]" | tr -d '\n' | tr -d ' ')
-  echo "Section TOC Number: $SECTION_TOC_NUMBER"
-  echo ""
-
   SUB_SECTIONS_HEADINGS=$(echo "$ARTICLE" | sed -n '/<div id="toc" class="toc"/,/<\/div>/p' | grep "tocnumber\">$SECTION_TOC_NUMBER\." | tr "<" "\n" | grep "href" | tr '"' '\n' | grep "#" | tr -d "#")
 
   if [[ ! -z "$SUB_SECTIONS_HEADINGS" ]]; then
