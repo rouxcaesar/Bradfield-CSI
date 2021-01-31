@@ -16,11 +16,17 @@
 //    directory (it's just a file).
 // 6) Read the directory contents (contained files/directories).
 
+// Stretch goals:
+// 1) Support -a flag to output hidden files; don't show hidden
+//    files by default.
+// 2) Support -l flat to output more info on files.
+// 3) Sort output of files by name (lexicographic order).
+
 #include <stdio.h>
 #include <stdlib.h>
 #include "dirent.h"
 
-int main() {
+int main(int argc, char *argv[]) {
   // Minimal ls constraints:
   //   - only consider current directory (none passed in)
   //   - no flags at this time
@@ -28,22 +34,28 @@ int main() {
   //       - print each filename on a newline for now
   //   - next, include the file size of each file
 
+  char *dir;
   DIR *folder;
   struct dirent *entry;
   int files = 0;
-  
-  folder = opendir(".");
 
+  // This can be a separate function.
+  // Extend into parsing of command args (flags and dir name).
+  if (argc > 1) {
+    dir = argv[1];
+  } else {
+    dir = ".";
+  }
+
+  folder = opendir(dir);
   if (folder == NULL)  {
     puts("Couldn't open directory\n");
     exit(1);
   }
 
-  puts("Directory can be opened!");
-
   while ((entry = readdir(folder))) {
     files++;
-    printf("File: %3d: %s\n", files, entry->d_name);
+    printf("%s\n", entry->d_name);
   }
 
   closedir(folder);
