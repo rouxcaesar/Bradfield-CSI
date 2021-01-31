@@ -1,0 +1,10 @@
+# Ignore all swp files from using Vim.
+*.swp
+
+# All lines below ensure that binary files are ignored.
+
+# Ignore all extensions.
+*
+
+# Unignore all with extensions.
+!*.*
