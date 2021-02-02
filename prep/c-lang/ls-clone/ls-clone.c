@@ -28,7 +28,7 @@ struct flags {
   bool all;
 };
 
-//int 
+int process_args(int argc, char *argv[], struct flags *f, char *dir);
 
 int print_files(DIR *folder, struct flags f);
 
@@ -40,8 +40,9 @@ int main(int argc, char *argv[]) {
   // This can be a separate function.
   // Extend into parsing of command args (flags and dir name).
   if (argc > 1) {
+    // Finish working on process_args function.
+    //process_args(argc, argv, &f, dir);
     dir = argv[1];
-   // process_args(argc, argv, &f, dir);
   } else {
     dir = ".";
   }
@@ -52,12 +53,25 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  if ((print_files(folder, f) == -1)) {
+  if ((print_files(folder, f) != 0)) {
     exit(EXIT_FAILURE);
   }
   closedir(folder);
 
   exit(EXIT_SUCCESS);
+}
+
+// process_args will process each of the arguments provided to the program.
+// Based on the arguments, the function will properly assign the name of
+// the directory to the *dir variable and set the values in the flags struct *f.
+int process_args(int argc, char *argv[], struct flags *f, char *dir) {
+  int i;
+
+  for (i = 1; i < argc; i++) {
+    printf("argv[%d] is %s\n", i, argv[i]);
+  }
+
+  return 0;
 }
 
 // print_files takes a DIR instance and considers each file in the DIR.
@@ -77,13 +91,14 @@ int print_files(DIR *folder, struct flags f) {
       }
     }
 
-    if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
-      printf("Can't open %s\n", entry->d_name);
-      return -1;
-    }
+    // Commented out code below don't handle directories, need to fix.
+   // if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
+   //   printf("Can't open %s\n", entry->d_name);
+   //   return 1;
+   // }
 
-    fstat(fd, &buf);
-    size = buf.st_size;
+   // fstat(fd, &buf);
+   // size = buf.st_size;
     
     printf("%lld\t%s\n", size, entry->d_name);
   }
