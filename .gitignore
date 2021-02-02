@@ -2,13 +2,13 @@
 
 # Ignore all extensions.
 *
-./*
 
 # Unignore all with extensions.
 !*.*
-!./*.*
+
+# Unignore all directories.
+!*/
 
 # Ignore all swp files from using Vim.
-./*.swp
-*.swp
+**/*.swp
 

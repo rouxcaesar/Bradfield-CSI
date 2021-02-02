@@ -24,16 +24,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "dirent.h"
 
 int main(int argc, char *argv[]) {
-  // Minimal ls constraints:
-  //   - only consider current directory (none passed in)
-  //   - no flags at this time
-  //   - print to stdout the name of each file in directory
-  //       - print each filename on a newline for now
-  //   - next, include the file size of each file
-
   char *dir;
   DIR *folder;
   struct dirent *entry;
@@ -47,6 +41,9 @@ int main(int argc, char *argv[]) {
     dir = ".";
   }
 
+  //if (argc > 2) {
+  //}
+
   folder = opendir(dir);
   if (folder == NULL)  {
     puts("Couldn't open directory\n");
@@ -54,6 +51,14 @@ int main(int argc, char *argv[]) {
   }
 
   while ((entry = readdir(folder))) {
+    if (((strcmp(entry->d_name, ".")) == 0) || ((strcmp(entry->d_name, "..")) == 0)) {
+      continue;
+    }
+
+    if (entry->d_name[0] == '.') {
+      continue;
+    }
+    
     files++;
     printf("%s\n", entry->d_name);
   }
