@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sysexits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
@@ -24,10 +25,12 @@
 #include "dirent.h"
 
 struct flags {
-  bool a;
+  bool all;
 };
 
-void print_files(DIR *folder, struct flags f);
+//int 
+
+int print_files(DIR *folder, struct flags f);
 
 int main(int argc, char *argv[]) {
   char *dir;
@@ -38,35 +41,35 @@ int main(int argc, char *argv[]) {
   // Extend into parsing of command args (flags and dir name).
   if (argc > 1) {
     dir = argv[1];
+   // process_args(argc, argv, &f, dir);
   } else {
     dir = ".";
   }
 
-  //if (argc > 2) {
-  //}
-
   folder = opendir(dir);
   if (folder == NULL)  {
     puts("Couldn't open directory\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
-  print_files(folder, f);
+  if ((print_files(folder, f) == -1)) {
+    exit(EXIT_FAILURE);
+  }
   closedir(folder);
 
-  return 0;
+  exit(EXIT_SUCCESS);
 }
 
 // print_files takes a DIR instance and considers each file in the DIR.
 // For each file, the function prints its the filesize and name.
-void print_files(DIR *folder, struct flags f) {
+int print_files(DIR *folder, struct flags f) {
   struct dirent *entry;
   int fd;
   struct stat buf;
   off_t size;
 
   while ((entry = readdir(folder))) {
-    if (!(f.a)) {
+    if (!(f.all)) {
       if (((strcmp(entry->d_name, ".")) == 0) || ((strcmp(entry->d_name, "..")) == 0)) {
         continue;
       } else if (entry->d_name[0] == '.') {
@@ -76,6 +79,7 @@ void print_files(DIR *folder, struct flags f) {
 
     if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
       printf("Can't open %s\n", entry->d_name);
+      return -1;
     }
 
     fstat(fd, &buf);
@@ -83,4 +87,6 @@ void print_files(DIR *folder, struct flags f) {
     
     printf("%lld\t%s\n", size, entry->d_name);
   }
+
+  return 0;
 }
