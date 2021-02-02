@@ -25,13 +25,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/file.h>
+#include <unistd.h>
 #include "dirent.h"
 
 int main(int argc, char *argv[]) {
   char *dir;
   DIR *folder;
   struct dirent *entry;
-  int files = 0;
+  int fd;
+  struct stat buf;
+  off_t size;
 
   // This can be a separate function.
   // Extend into parsing of command args (flags and dir name).
@@ -53,14 +59,18 @@ int main(int argc, char *argv[]) {
   while ((entry = readdir(folder))) {
     if (((strcmp(entry->d_name, ".")) == 0) || ((strcmp(entry->d_name, "..")) == 0)) {
       continue;
-    }
-
-    if (entry->d_name[0] == '.') {
+    } else if (entry->d_name[0] == '.') {
       continue;
     }
+
+    if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
+      printf("Can't open %s\n", entry->d_name);
+    }
+
+    fstat(fd, &buf);
+    size = buf.st_size;
     
-    files++;
-    printf("%s\n", entry->d_name);
+    printf("%lld\t%s\n", size, entry->d_name);
   }
 
   closedir(folder);
