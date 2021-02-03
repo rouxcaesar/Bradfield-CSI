@@ -53,7 +53,6 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  //printf("dir: %s\n", dir);
   if ((print_files(folder, f, dir) != 0)) {
     exit(EXIT_FAILURE);
   }
@@ -101,19 +100,16 @@ int print_files(DIR *folder, struct flags f, char *dir) {
     lstat(entry->d_name, &buf);
     if (!S_ISREG(buf.st_mode)) {
       size = buf.st_size;
-      //printf("dname %s buf.st_size: %lld\n", entry->d_name, buf.st_size);
     } else {
-      // Currently fails to open due to missing/incorrect relative path to filename.
-      // Have to create relative path and prepend it to the entry->d_name value in open() call.
       if (use_path) {
         strcat(rel_path, dir);
         strcat(rel_path, entry->d_name);
-        //printf("rel_path: %s\n", rel_path);
 
         if ((fd = open(rel_path, O_RDONLY, 0)) == -1) {
           printf("Can't open %s\n", rel_path);
           return 1;
         }
+
       } else {
         if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
           printf("Can't open %s\n", entry->d_name);
@@ -128,11 +124,6 @@ int print_files(DIR *folder, struct flags f, char *dir) {
     printf("%lld\t%s\n", size, entry->d_name);
     memset(rel_path, 0, sizeof rel_path);
   }
-
- // char *path_file = "../problems/1-ch/1-9.c";
- // if ((fd = open(path_file, O_RDONLY, 0)) != -1) {
- //   printf("I can open %s!\n", path_file);
- // }
 
   return 0;
   }
