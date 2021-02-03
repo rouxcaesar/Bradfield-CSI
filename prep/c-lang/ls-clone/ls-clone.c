@@ -34,7 +34,7 @@ int process_args(int argc, char *argv[], struct flags *f, char *dir);
 int print_files(DIR *folder, struct flags f, char *dir);
 
 int main(int argc, char *argv[]) {
-  char *dir;
+  char dir[100];
   DIR *folder;
   struct flags f;
 
@@ -44,9 +44,10 @@ int main(int argc, char *argv[]) {
       exit(EXIT_FAILURE);
     }
     // Fix line below now that we are supporting flags.
-    dir = argv[1];
+    //dir = argv[1];
   } else {
-    dir = ".";
+    strcpy(dir, ".");
+    //dir = ".";
   }
 
   folder = opendir(dir);
@@ -85,14 +86,17 @@ int process_args(int argc, char *argv[], struct flags *f, char *dir) {
           break;
         default:
           return 1;
-      }
-
+      } 
+    } else if ((arg[0] == '.') || (arg[0] == '/')) {
+        strcpy(dir, arg);
     }
+
     memset(arg, 0, sizeof arg);
   }
 
   printf("f.all? %d\n", f->all);
   printf("f.time? %d\n", f->time);
+  printf("dir is %s\n", dir);
 
   return 0;
 }
