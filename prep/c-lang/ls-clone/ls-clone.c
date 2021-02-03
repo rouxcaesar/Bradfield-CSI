@@ -26,6 +26,7 @@
 
 struct flags {
   bool all;
+  bool time;
 };
 
 int process_args(int argc, char *argv[], struct flags *f, char *dir);
@@ -37,11 +38,12 @@ int main(int argc, char *argv[]) {
   DIR *folder;
   struct flags f;
 
-  // This can be a separate function.
-  // Extend into parsing of command args (flags and dir name).
   if (argc > 1) {
     // Finish working on process_args function.
-    //process_args(argc, argv, &f, dir);
+    if (process_args(argc, argv, &f, dir) != 0) {
+      exit(EXIT_FAILURE);
+    }
+    // Fix line below now that we are supporting flags.
     dir = argv[1];
   } else {
     dir = ".";
@@ -66,10 +68,31 @@ int main(int argc, char *argv[]) {
 // the directory to the *dir variable and set the values in the flags struct *f.
 int process_args(int argc, char *argv[], struct flags *f, char *dir) {
   int i;
+  char arg[100];
 
   for (i = 1; i < argc; i++) {
-    printf("argv[%d] is %s\n", i, argv[i]);
+    strcpy(arg, argv[i]);
+    printf("arg is %s\n", arg);
+
+    if (arg[0] == '-') {
+      printf("IT'S A FLAG!\n");
+      switch (arg[1]) {
+        case 'a':
+          f->all = true;
+          break;
+        case 't':
+          f->time = true;
+          break;
+        default:
+          return 1;
+      }
+
+    }
+    memset(arg, 0, sizeof arg);
   }
+
+  printf("f.all? %d\n", f->all);
+  printf("f.time? %d\n", f->time);
 
   return 0;
 }
