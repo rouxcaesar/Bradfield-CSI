@@ -30,7 +30,7 @@ struct flags {
 
 int process_args(int argc, char *argv[], struct flags *f, char *dir);
 
-int print_files(DIR *folder, struct flags f);
+int print_files(DIR *folder, struct flags f, char *dir);
 
 int main(int argc, char *argv[]) {
   char *dir;
@@ -53,7 +53,8 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  if ((print_files(folder, f) != 0)) {
+  //printf("dir: %s\n", dir);
+  if ((print_files(folder, f, dir) != 0)) {
     exit(EXIT_FAILURE);
   }
   closedir(folder);
@@ -76,11 +77,17 @@ int process_args(int argc, char *argv[], struct flags *f, char *dir) {
 
 // print_files takes a DIR instance and considers each file in the DIR.
 // For each file, the function prints its the filesize and name.
-int print_files(DIR *folder, struct flags f) {
+int print_files(DIR *folder, struct flags f, char *dir) {
   struct dirent *entry;
   int fd;
   struct stat buf;
   off_t size;
+  bool use_path;
+  char rel_path[100];
+
+  if (strcmp(dir, ".") != 0) {
+    use_path = true;
+  }
 
   while ((entry = readdir(folder))) {
     if (!(f.all)) {
@@ -98,9 +105,20 @@ int print_files(DIR *folder, struct flags f) {
     } else {
       // Currently fails to open due to missing/incorrect relative path to filename.
       // Have to create relative path and prepend it to the entry->d_name value in open() call.
-      if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
-        printf("Can't open %s\n", entry->d_name);
-        return 1;
+      if (use_path) {
+        strcat(rel_path, dir);
+        strcat(rel_path, entry->d_name);
+        //printf("rel_path: %s\n", rel_path);
+
+        if ((fd = open(rel_path, O_RDONLY, 0)) == -1) {
+          printf("Can't open %s\n", rel_path);
+          return 1;
+        }
+      } else {
+        if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
+          printf("Can't open %s\n", entry->d_name);
+          return 1;
+        }
       }
 
       fstat(fd, &buf);
@@ -108,7 +126,13 @@ int print_files(DIR *folder, struct flags f) {
     }
 
     printf("%lld\t%s\n", size, entry->d_name);
+    memset(rel_path, 0, sizeof rel_path);
   }
+
+ // char *path_file = "../problems/1-ch/1-9.c";
+ // if ((fd = open(path_file, O_RDONLY, 0)) != -1) {
+ //   printf("I can open %s!\n", path_file);
+ // }
 
   return 0;
   }
