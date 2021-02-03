@@ -96,6 +96,8 @@ int print_files(DIR *folder, struct flags f) {
       size = buf.st_size;
       //printf("dname %s buf.st_size: %lld\n", entry->d_name, buf.st_size);
     } else {
+      // Currently fails to open due to missing/incorrect relative path to filename.
+      // Have to create relative path and prepend it to the entry->d_name value in open() call.
       if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
         printf("Can't open %s\n", entry->d_name);
         return 1;
@@ -108,5 +110,5 @@ int print_files(DIR *folder, struct flags f) {
     printf("%lld\t%s\n", size, entry->d_name);
   }
 
-    return 0;
+  return 0;
   }
