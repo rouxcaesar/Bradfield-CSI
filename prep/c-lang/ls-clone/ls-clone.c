@@ -30,7 +30,7 @@ struct flags {
 
 int process_args(int argc, char *argv[], struct flags *f, char *dir);
 
-int print_files(DIR *folder, struct flags f);
+int print_files(DIR *folder, struct flags f, char *dir);
 
 int main(int argc, char *argv[]) {
   char *dir;
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  if ((print_files(folder, f) != 0)) {
+  if ((print_files(folder, f, dir) != 0)) {
     exit(EXIT_FAILURE);
   }
   closedir(folder);
@@ -76,11 +76,17 @@ int process_args(int argc, char *argv[], struct flags *f, char *dir) {
 
 // print_files takes a DIR instance and considers each file in the DIR.
 // For each file, the function prints its the filesize and name.
-int print_files(DIR *folder, struct flags f) {
+int print_files(DIR *folder, struct flags f, char *dir) {
   struct dirent *entry;
   int fd;
   struct stat buf;
   off_t size;
+  char path[50];
+  bool use_path;
+
+  if (strcmp(dir, ".") != 0) {
+    use_path = true;
+  }
 
   while ((entry = readdir(folder))) {
     if (!(f.all)) {
@@ -91,16 +97,28 @@ int print_files(DIR *folder, struct flags f) {
       }
     }
 
-    // Commented out code below don't handle directories, need to fix.
-   // if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
-   //   printf("Can't open %s\n", entry->d_name);
-   //   return 1;
-   // }
+    if (use_path) {
+      strcat(path, dir);
+      strcat(path, entry->d_name);
+    }
 
-   // fstat(fd, &buf);
-   // size = buf.st_size;
+    lstat(entry->d_name, &buf);
+    if (!S_ISREG(buf.st_mode)) {
+      size = buf.st_size;
+      //printf("dname %s buf.st_size: %lld\n", entry->d_name, buf.st_size);
+    } else {
+
+      if ((fd = open(entry->d_name, O_RDONLY, 0)) == -1) {
+        printf("Can't open %s\n", entry->d_name);
+        return 1;
+      }
+
+      fstat(fd, &buf);
+      size = buf.st_size;
+    }
     
     printf("%lld\t%s\n", size, entry->d_name);
+    memset(path, 0, sizeof path);
   }
 
   return 0;
