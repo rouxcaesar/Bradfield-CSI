@@ -32,7 +32,7 @@ struct flags {
 
 int process_args(int argc, char *argv[], struct flags *f, char *dir);
 
-int print_files(DIR *folder, struct flags f, char *dir);
+int print_files(DIR *folder, struct flags *f, char *dir);
 
 int main(int argc, char *argv[]) {
   char dir[100];
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  if ((print_files(folder, f, dir) != 0)) {
+  if ((print_files(folder, &f, dir) != 0)) {
     exit(EXIT_FAILURE);
   }
   closedir(folder);
@@ -114,7 +114,7 @@ int process_args(int argc, char *argv[], struct flags *f, char *dir) {
 
 // print_files takes a DIR instance and considers each file in the DIR.
 // For each file, the function prints its the filesize and name.
-int print_files(DIR *folder, struct flags f, char *dir) {
+int print_files(DIR *folder, struct flags *f, char *dir) {
   struct dirent *entry;
   int fd;
   struct stat buf;
@@ -127,7 +127,7 @@ int print_files(DIR *folder, struct flags f, char *dir) {
   }
 
   while ((entry = readdir(folder))) {
-    if (!(f.all)) {
+    if (!(f->all)) {
       if (((strcmp(entry->d_name, ".")) == 0) || ((strcmp(entry->d_name, "..")) == 0)) {
         continue;
       } else if (entry->d_name[0] == '.') {
@@ -137,6 +137,9 @@ int print_files(DIR *folder, struct flags f, char *dir) {
 
     lstat(entry->d_name, &buf);
     if (!S_ISREG(buf.st_mode)) {
+      // Need to properly determine size of directories.
+      // Likely need to sum the size of all files in subdirectories recursively.
+      // Best to extract that logic into a separate function.
       size = buf.st_size;
     } else {
       if (use_path) {
