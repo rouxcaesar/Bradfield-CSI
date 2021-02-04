@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include "dirent.h"
 
+// flags struct will track which flags the user has passed in
 struct flags {
   bool all;
   bool time;
@@ -39,15 +40,31 @@ int main(int argc, char *argv[]) {
   struct flags f;
 
   if (argc > 1) {
-    // Finish working on process_args function.
-    if (process_args(argc, argv, &f, dir) != 0) {
-      exit(EXIT_FAILURE);
+    // If user has passed the "--help" option, print out the help message
+    // and then immediately exit.
+    if (strcmp(argv[1], "--help") == 0) {
+      puts("");
+      printf("./ls-clone [flags] [target-directory]\n");
+      puts("");
+      printf("ls-clone - A minimal clone of the ls tool.\n");
+      puts("");
+      printf("Flags:\n");
+      puts("");
+      printf("-a - Output all files in target directory including dotfiles\n");
+      printf("-t - Output all files sorted by time of last modification in descending order\n");
+      puts("");
+      exit(EXIT_SUCCESS);
+    } else {
+      // If user has passed in more than one argument, process the arguments to
+      // properly consider flags and target directory.
+      if (process_args(argc, argv, &f, dir) != 0) {
+        exit(EXIT_FAILURE);
+      }
     }
-    // Fix line below now that we are supporting flags.
-    //dir = argv[1];
   } else {
+    // In the case of no arguments other than the program name ("./ls-clone"),
+    // set dir to the current working directory.
     strcpy(dir, ".");
-    //dir = ".";
   }
 
   folder = opendir(dir);
@@ -73,10 +90,8 @@ int process_args(int argc, char *argv[], struct flags *f, char *dir) {
 
   for (i = 1; i < argc; i++) {
     strcpy(arg, argv[i]);
-    printf("arg is %s\n", arg);
 
     if (arg[0] == '-') {
-      printf("IT'S A FLAG!\n");
       switch (arg[1]) {
         case 'a':
           f->all = true;
@@ -88,15 +103,11 @@ int process_args(int argc, char *argv[], struct flags *f, char *dir) {
           return 1;
       } 
     } else if ((arg[0] == '.') || (arg[0] == '/')) {
-        strcpy(dir, arg);
+      strcpy(dir, arg);
     }
 
     memset(arg, 0, sizeof arg);
   }
-
-  printf("f.all? %d\n", f->all);
-  printf("f.time? %d\n", f->time);
-  printf("dir is %s\n", dir);
 
   return 0;
 }
@@ -153,4 +164,4 @@ int print_files(DIR *folder, struct flags f, char *dir) {
   }
 
   return 0;
-  }
+}
