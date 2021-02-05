@@ -2,17 +2,6 @@
 // Minimally, it will list the contents of a directory including
 // some information about each file, such as file size.
 
-// Approach:
-// 1) Process argc and argv values to determine correct action(s).
-// 2) If (argc == 1), then we handle the current directory.
-// 3) If (argc > 1), then we have flags or a different directory to handle.
-// 4) For flags, we can process all the flags at once and set
-//    corresponding variables to 0 or 1 (bitfields), then
-//    reference them later in the program.
-// 5) Once specified directory is known, begin by opening the
-//    directory (it's just a file).
-// 6) Read the directory contents (contained files/directories).
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -24,34 +13,41 @@
 #include <unistd.h>
 #include "dirent.h"
 
-// flags struct will track which flags the user has passed in
+// flags struct will track which flags the user has passed in.
 struct flags {
   bool all;
-  bool time;
+  bool file_size;
 };
 
+// process_args will process any flags and target directory provided by the user.
 int process_args(int argc, char *argv[], struct flags *f, char *dir);
 
+// print_files will open the provided directory file and print each of the files
+// contained in the directory.
+// Output will be modified depending on values set in the flags struct argument.
 int print_files(DIR *folder, struct flags *f, char *dir);
 
 int main(int argc, char *argv[]) {
   char dir[100];
   DIR *folder;
   struct flags f;
+  f.all = f.file_size = false;
 
   if (argc > 1) {
     // If user has passed the "--help" option, print out the help message
     // and then immediately exit.
     if (strcmp(argv[1], "--help") == 0) {
       puts("");
-      printf("./ls-clone [flags] [target-directory]\n");
+      puts("./ls-clone [flags] [target-directory]");
       puts("");
-      printf("ls-clone - A minimal clone of the ls tool.\n");
+      puts("ls-clone - A minimal clone of the ls tool.");
       puts("");
-      printf("Flags:\n");
+      puts("Flags: Each separated by a space and prefixed with a '-'");
       puts("");
-      printf("-a - Output all files in target directory including dotfiles\n");
-      printf("-t - Output all files sorted by time of last modification in descending order\n");
+      puts("-a - Output all files in target directory including dotfiles");
+      puts("-t - Output all files sorted by time of last modification in descending order");
+      puts("");
+      puts("Example: ./ls-clone -a -f ./");
       puts("");
       exit(EXIT_SUCCESS);
     } else {
@@ -96,8 +92,8 @@ int process_args(int argc, char *argv[], struct flags *f, char *dir) {
         case 'a':
           f->all = true;
           break;
-        case 't':
-          f->time = true;
+        case 'f':
+          f->file_size = true;
           break;
         default:
           return 1;
@@ -109,11 +105,16 @@ int process_args(int argc, char *argv[], struct flags *f, char *dir) {
     memset(arg, 0, sizeof arg);
   }
 
+  if (strchr(dir, '.') == NULL) {
+    strcpy(dir, ".");
+  }
+
   return 0;
 }
 
-// print_files takes a DIR instance and considers each file in the DIR.
-// For each file, the function prints its the filesize and name.
+// print_files takes an opened directory instance and considers each file in the directory.
+// For each file, the function will print out the file in accordance to the values of
+// any flags provided by the user.
 int print_files(DIR *folder, struct flags *f, char *dir) {
   struct dirent *entry;
   int fd;
@@ -122,11 +123,15 @@ int print_files(DIR *folder, struct flags *f, char *dir) {
   bool use_path;
   char rel_path[100];
 
+  // If user has provided a target directory, we set a feature flag to ensure control
+  // flow down a branch that sets up the relative path for each file to be printed.
+  // The relative path needs to be constructed for proper execution of opening each file.
   if (strcmp(dir, ".") != 0) {
     use_path = true;
   }
 
   while ((entry = readdir(folder))) {
+    // If user has not passed in the '-a' flag, then we ignore all hidden or dotfiles files.
     if (!(f->all)) {
       if (((strcmp(entry->d_name, ".")) == 0) || ((strcmp(entry->d_name, "..")) == 0)) {
         continue;
@@ -136,12 +141,15 @@ int print_files(DIR *folder, struct flags *f, char *dir) {
     }
 
     lstat(entry->d_name, &buf);
+    // If entry is not a regular file, then it's a directory and should follow it's own branch.
     if (!S_ISREG(buf.st_mode)) {
       // Need to properly determine size of directories.
       // Likely need to sum the size of all files in subdirectories recursively.
       // Best to extract that logic into a separate function.
       size = buf.st_size;
     } else {
+      // If target directory was provided, create needed relative path to entry
+      // for proper execution of open().
       if (use_path) {
         strcat(rel_path, dir);
         strcat(rel_path, entry->d_name);
@@ -162,7 +170,17 @@ int print_files(DIR *folder, struct flags *f, char *dir) {
       size = buf.st_size;
     }
 
-    printf("%lld\t%s\n", size, entry->d_name);
+    // If user passed in the '-f' flag, print out the file size of each file.
+    if (f->file_size) {
+    // (TODO): Currently, program does not properly compute the file size of directories.
+    // To do so, we'll need to recursively find the file_size of all files in the
+    // directory and nested directories and sum them up in order to obtain the
+    // directory's file size.
+      printf("%lld\t%s\n", size, entry->d_name);
+    } else {
+      printf("%s\n", entry->d_name);
+    }
+
     memset(rel_path, 0, sizeof rel_path);
   }
 
