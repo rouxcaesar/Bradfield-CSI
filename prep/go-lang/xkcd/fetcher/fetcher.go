@@ -22,7 +22,7 @@ func Fetch() error {
 
 	// Fetch a comic from xkcd site.
 	// There are a total of 2422 comics!
-	for i := 1; i <= 2; i++ {
+	for i := 1; i <= 2422; i++ {
 		req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
 
 		resp, err := http.Get(req)
