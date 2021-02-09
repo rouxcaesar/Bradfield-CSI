@@ -4,7 +4,7 @@ A program that fetches all of the `xkcd` comics, builds an offline index, and al
 
 ## Benchmarks
 
-Data collection from using a `for` loop to fetch each URL and write the response body to a file one at a time for 2422 comics, 
+Data collection from using a `for` loop to fetch each URL and write the response body to a file one at a time for 2422 comics:
 
 ```
 $ time go run main.go
