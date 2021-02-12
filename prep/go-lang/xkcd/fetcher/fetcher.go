@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	_ "os"
+	"os"
 
 	"github.com/pkg/errors"
 )
@@ -44,7 +44,7 @@ func Fetch() error {
 	//       Then on other end of channel read data and
 	//       write data to file/index.
 	//for i := 1; i <= 2422; i++ {
-	for i := 1; i <= 2; i++ {
+	for i := 1; i <= 5; i++ {
 		req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
 
 		resp, err := http.Get(req)
@@ -77,8 +77,20 @@ func Fetch() error {
 		//fmt.Printf("%s\n\n", data)
 	}
 
-	for k, v := range index {
-		fmt.Printf("%d: %s\n\n", k, v)
+	//	for k, v := range index {
+	//		fmt.Printf("%d: %s\n\n", k, v)
+	//	}
+
+	// Now save the contents of the index variable to a file
+	// to make it an "offline" index.
+	file, err := os.Create("index.json")
+	if err != nil {
+		return errors.Wrap(err, "failed to create file index.json")
+	}
+	defer file.Close()
+
+	if err := json.NewEncoder(file).Encode(&index); err != nil {
+		return errors.Wrap(err, "failed to encode index into index.json")
 	}
 
 	return nil

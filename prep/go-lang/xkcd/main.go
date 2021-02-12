@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -37,13 +38,38 @@ func main() {
 	//    Search index for matching comics.
 	//    For each match, write URL and transcript to output with newlines
 	//    between each match..
-	err := fetcher.Fetch()
+
+	if !index.IndexExists() {
+
+		err := fetcher.Fetch()
+		if err != nil {
+			fmt.Print(err)
+			os.Exit(1)
+		}
+
+		index.BuildIndex()
+
+		fmt.Println("Back inside main!\n\n")
+
+	}
+
+	// Open index.json file and decode data into index variable.
+	i := make(map[int]string)
+
+	f, err := os.Open("index.json")
 	if err != nil {
 		fmt.Print(err)
 		os.Exit(1)
 	}
 
-	index.BuildIndex()
+	if err := json.NewDecoder(f).Decode(&i); err != nil {
+		fmt.Print(err)
+		os.Exit(1)
+	}
+
+	for k, v := range i {
+		fmt.Printf("%d: %s\n\n", k, v)
+	}
 
 	// Argument searchTerm will be the argument passed in by the
 	// user of this program.

@@ -1,6 +1,9 @@
 package index
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 // For our offline index of all the xkcd comics, we need
 // a data structure that is suited for search operations
@@ -22,4 +25,16 @@ import "fmt"
 // - Define
 func BuildIndex() {
 	fmt.Println("Inside BuildIndex!\n")
+}
+
+// IndexExists checks whether the offline index file
+// already exists.
+func IndexExists() bool {
+	info, err := os.Stat("index.json")
+
+	if os.IsNotExist(err) {
+		return false
+	}
+
+	return !info.IsDir()
 }
