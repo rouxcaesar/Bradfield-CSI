@@ -19,6 +19,19 @@ import (
 func main() {
 	fmt.Printf("Hi from main!\n\n")
 
+	// Check args provided to program and grab search term.
+	// searchTerm, err := processArgs()
+	// if err != nil {
+	//   fmt.Println(err)
+	//   os.Exit(1)
+	// }
+	//
+	// // Below check represents printing help statement.
+	// // Could be better, don't want `nil` value to represent "--help".
+	// if !searchTerm {
+	//   os.Exit(0)
+	// }
+
 	// Check if offline index exists.
 	// If not, output message to user and build index.
 	// This will involve fetching the URLs, building the index,
@@ -35,7 +48,7 @@ func main() {
 
 		err := fetcher.Fetch()
 		if err != nil {
-			fmt.Print(err)
+			fmt.Println(err)
 			os.Exit(1)
 		}
 
@@ -50,12 +63,12 @@ func main() {
 
 	f, err := os.Open("index.json")
 	if err != nil {
-		fmt.Print(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	if err := json.NewDecoder(f).Decode(&i); err != nil {
-		fmt.Print(err)
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
@@ -74,4 +87,15 @@ func main() {
 	search.SearchIndex(searchTerm)
 
 	fmt.Printf("Goodbye!\n")
+}
+
+func processArgs() (string, error) {
+	if len(os.Args) > 2 {
+		return nil, errors.New("too many arguments provided, please see --help")
+	}
+
+	if os.Args[1] == "--help" {
+		printHelp()
+		return nil, nil
+	}
 }
