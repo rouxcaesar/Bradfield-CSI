@@ -16,15 +16,11 @@ import (
 // complexity for deletions or updates to the data strucure's contents.
 //
 // Reference: https://en.wikipedia.org/wiki/Search_data_structure
-//
-// Some choices I'm considering:
-// - Hash Table (or map in Go)
-// - B-Tree
-//
-// PLAN:
-// - Define
+// For this program, we'll build a hash table for fast reads.
+
+// BuildIndex will create the offline index.
 func BuildIndex() {
-	fmt.Println("Inside BuildIndex!\n")
+	fmt.Printf("Inside BuildIndex!\n")
 }
 
 // IndexExists checks whether the offline index file

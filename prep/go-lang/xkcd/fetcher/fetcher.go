@@ -60,29 +60,13 @@ func Fetch() error {
 
 		var comic Comic
 		err = json.Unmarshal(data, &comic)
-		//fmt.Printf("%+v\n\n", comic)
 
 		index[comic.Num] = comic.Transcript
-
-		// Append two newline chars to the array to improve the
-		// readability of data stored in file/index.
-		//data = append(data, 10)
-		//data = append(data, 10)
-
-		//	_, err = f.Write(data)
-		//	if err != nil {
-		//		return err
-		//	}
-
-		//fmt.Printf("%s\n\n", data)
 	}
-
-	//	for k, v := range index {
-	//		fmt.Printf("%d: %s\n\n", k, v)
-	//	}
 
 	// Now save the contents of the index variable to a file
 	// to make it an "offline" index.
+	// This should be moved to the BuildIndex() func in the index package.
 	file, err := os.Create("index.json")
 	if err != nil {
 		return errors.Wrap(err, "failed to create file index.json")

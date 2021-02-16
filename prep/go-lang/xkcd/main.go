@@ -15,24 +15,14 @@ import (
 // The transcript is part of the JSON response returned
 // by fetching the URL, but the URL itself isn't in the
 // response body payload.
-//
-// We can either:
-// (1) Add the URL to the data stored in each value in the index.
-// OR,
-// (2) Have the URL as a constant and substitute in the `num` value
-//     which is part of the response body.
 
 func main() {
 	fmt.Printf("Hi from main!\n\n")
 
-	// 1) Check if offline index exists.
-	//    If not, output message to user and build index.
-	//			- This will involve fetching the URLs, building the index,
-	//        and saving to a file.
-
-	// 2) Now, load the index into memory for access.
-	//    This will involve data serialization/deserialization.
-	//    Take the data in the file and store into a map.
+	// Check if offline index exists.
+	// If not, output message to user and build index.
+	// This will involve fetching the URLs, building the index,
+	// and saving to a file.
 
 	// 3) Next, parse argument to program which will be the search term.
 	//    Search index for matching comics.
@@ -40,6 +30,8 @@ func main() {
 	//    between each match..
 
 	if !index.IndexExists() {
+
+		fmt.Printf("Offline index not found, building index now\n")
 
 		err := fetcher.Fetch()
 		if err != nil {
@@ -49,10 +41,10 @@ func main() {
 
 		index.BuildIndex()
 
-		fmt.Println("Back inside main!\n\n")
-
+		fmt.Printf("Offline index built, ready to search\n")
 	}
 
+	// Now, load the offline index into memory for access.
 	// Open index.json file and decode data into index variable.
 	i := make(map[int]string)
 
@@ -75,8 +67,11 @@ func main() {
 	// user of this program.
 	//
 	// Ex: `xkcd sheep` -> searchTerm == "sheep"
+	//
+	// To start, offer search based on comic number.
+	// Ex: `xkcd 275` -> searchTerm == "275"
 	searchTerm := "Baaaahhhhh"
 	search.SearchIndex(searchTerm)
 
-	fmt.Printf("Finished execution, bye!\n")
+	fmt.Printf("Goodbye!\n")
 }
