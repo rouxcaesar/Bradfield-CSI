@@ -58,7 +58,7 @@ func Fetch() error {
 		// The variable i is passed into the IIFE to avoid the common bug
 		// involving variable scope and for loops.
 		// Reference: https://dev.to/kkentzo/the-golang-for-loop-gotcha-1n35
-		go func() {
+		go func(i int) {
 			// We decrement the wait group once the goroutine is finished.
 			defer wg.Done()
 
@@ -66,12 +66,14 @@ func Fetch() error {
 
 			resp, err := http.Get(req)
 			if err != nil {
+				// Need to send error into error channel
 				return errors.Wrap(err, "failed to make GET request for xkcd comic")
 			}
 
 			// Read JSON payload from response.
 			data, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
+				// Need to send error into error channel
 				return errors.Wrap(err, "failed to read body of response")
 			}
 
@@ -84,6 +86,9 @@ func Fetch() error {
 		}(i)
 	}
 
+	// Need to create a select stmt to listen to two channels:
+	//  1) For completion of wait group (new channel and goroutine)
+	//  2) For message from error channel
 	// Block until all of the above goroutines finish.
 	wg.Wait()
 
