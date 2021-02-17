@@ -6,9 +6,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/pkg/errors"
 )
+
+// The current number of xkcd comics.
+// TODO: Make this variable "discoverable" through
+//       a network request to the xkcd website.
+const maxComics = 2425
 
 type Comic struct {
 	Month      string `json:"month"`
@@ -28,13 +34,10 @@ func Fetch() error {
 	fmt.Printf("Hi from Fetch!\n\n")
 
 	var req string
+	var wg sync.WaitGroup
+	messages := make(chan Comic, maxComics)
+	done := make(chan bool)
 	index := make(map[int]string)
-
-	//f, err := os.Create("index.txt")
-	//if err != nil {
-	//	return err
-	//}
-	//defer f.Close()
 
 	// Fetch a comic from xkcd site.
 	// There are a total of 2422 comics!
@@ -43,26 +46,68 @@ func Fetch() error {
 	//       goroutines and send data through channel.
 	//       Then on other end of channel read data and
 	//       write data to file/index.
-	//for i := 1; i <= 2422; i++ {
+	//for i := 1; i <= maxComics; i++ {
 	for i := 1; i <= 5; i++ {
-		req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
+		// We increment the wait group for each goroutine.
+		wg.Add(1)
 
-		resp, err := http.Get(req)
-		if err != nil {
-			return errors.Wrap(err, "failed to make GET request for xkcd comic")
-		}
+		// Spin off a separate producer goroutine to handle:
+		//   - making a network request for a comic
+		//   - parsing the response body
+		//   - unmarshalling response body int a comic struct instance
+		// The variable i is passed into the IIFE to avoid the common bug
+		// involving variable scope and for loops.
+		// Reference: https://dev.to/kkentzo/the-golang-for-loop-gotcha-1n35
+		go func() {
+			// We decrement the wait group once the goroutine is finished.
+			defer wg.Done()
 
-		// Read JSON payload from response.
-		data, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return errors.Wrap(err, "failed to read body of response")
-		}
+			req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
 
-		var comic Comic
-		err = json.Unmarshal(data, &comic)
+			resp, err := http.Get(req)
+			if err != nil {
+				return errors.Wrap(err, "failed to make GET request for xkcd comic")
+			}
 
-		index[comic.Num] = comic.Transcript
+			// Read JSON payload from response.
+			data, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return errors.Wrap(err, "failed to read body of response")
+			}
+
+			var comic Comic
+			err = json.Unmarshal(data, &comic)
+
+			// Pass constructed comic instance into channel for consumer
+			// goroutine to process.
+			messages <- comic
+		}(i)
 	}
+
+	// Block until all of the above goroutines finish.
+	wg.Wait()
+
+	// Close the channel to signal that we are done using it.
+	// We can do this even before reading message from the channel.
+	close(messages)
+
+	// This consumer goroutine reads messages off the channel and builds the
+	// index map.
+	// Maps are not safe for concurrency by themselves, so we couldn't have
+	// the producer goroutines update the map.
+	// With this approach, the map is updated in a sequential manner.
+	go func() {
+		for c := range messages {
+			index[c.Num] = c.Transcript
+		}
+
+		// Once we have finished reading all the messages on the channel,
+		// we send a message on the done channel to indicate that we are
+		// finished building the index.
+		done <- true
+	}()
+
+	<-done
 
 	// Now save the contents of the index variable to a file
 	// to make it an "offline" index.
