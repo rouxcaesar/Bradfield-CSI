@@ -66,9 +66,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	for k, v := range i {
-		fmt.Printf("%d: %s\n\n", k, v)
-	}
+	//for k, v := range i {
+	//	fmt.Printf("%d: %s\n\n", k, v)
+	//}
 
 	// Next, parse argument to program which will be the search term.
 	// Search index for matching comics.
@@ -82,10 +82,14 @@ func main() {
 	//
 	// To start, offer search based on comic number.
 	// Ex: `xkcd 275` -> searchTerm == "275"
-	//searchTerm = "Baaaahhhhh"
-	search.SearchIndex(searchTerm)
+	err = search.SearchIndex(searchTerm, i)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	fmt.Printf("Goodbye!\n")
+	os.Exit(0)
 }
 
 func printHelp() {
