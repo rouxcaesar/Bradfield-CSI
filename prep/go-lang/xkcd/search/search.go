@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -21,13 +22,35 @@ func SearchIndex(searchTerm string, index map[int]string) error {
 	if err != nil {
 		// Provided searchTerm is not a number.
 		// Must search index for a string of characters.
-		// searchTranscripts(searchTerm, index)
-		return errors.New("search based on string of chars not implemented yet")
+		return searchTranscripts(searchTerm, index)
 	}
 
 	return searchKeys(num, index)
 }
 
+// searchTranscripts will consider each value stored in the index
+// and search for a match with the user provided search term.
+// This search term will be a string of characters.
+func searchTranscripts(searchTerm string, index map[int]string) error {
+	found := false
+
+	// Search every comic in the index for a match with provided searchTerm.
+	for k, v := range index {
+		if strings.Contains(v, searchTerm) {
+			printMatch(k, v)
+			found = true
+		}
+	}
+
+	if !found {
+		return errors.New("No comic was found for provided search term\n\n")
+	}
+
+	return nil
+}
+
+// searchKeys will look up the transcript of a comic
+// that is stored in the offline index via the comic's number.
 func searchKeys(num int, index map[int]string) error {
 	v, ok := index[num]
 	if !ok {

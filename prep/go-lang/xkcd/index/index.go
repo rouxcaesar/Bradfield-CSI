@@ -15,10 +15,11 @@ import (
 // For the same reason, we don't need to worry about the time
 // complexity for deletions or updates to the data strucure's contents.
 //
-// Reference: https://en.wikipedia.org/wiki/Search_data_structure
-// For this program, we'll build a hash table for fast reads.
+// Thus, a hash map will provide us with a simple data structure
+// that features fast read and insert operations.
 
 // BuildIndex will create the offline index.
+// Right now, this logic is coupled within fetch.go
 func BuildIndex() {
 	fmt.Printf("Inside BuildIndex!\n")
 }

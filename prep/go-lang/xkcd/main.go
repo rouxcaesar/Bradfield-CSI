@@ -11,12 +11,6 @@ import (
 	"bradfield-csi/prep/go-lang/xkcd/search"
 )
 
-// When printing the output of a found result, we need to
-// show the URL and transcript.
-// The transcript is part of the JSON response returned
-// by fetching the URL, but the URL itself isn't in the
-// response body payload.
-
 func main() {
 	// Check if user wishes to view the help display.
 	if os.Args[1] == "--help" {
@@ -32,13 +26,9 @@ func main() {
 	}
 
 	// Check if offline index exists.
-	// If not, output message to user and build index.
-	// This will involve fetching the URLs, building the index,
-	// and saving to a file.
-
+	// If not, we first build the offline index.
 	if !index.IndexExists() {
-
-		fmt.Printf("Offline index not found, building index now\n")
+		fmt.Printf("Offline index not found, building index now\n\n")
 
 		err := fetcher.Fetch()
 		if err != nil {
@@ -47,12 +37,12 @@ func main() {
 		}
 
 		index.BuildIndex()
-
-		fmt.Printf("Offline index built, ready to search\n")
+		fmt.Printf("Offline index built, ready to search\n\n")
 	}
 
-	// Now, load the offline index into memory for access.
-	// Open index.json file and decode data into index variable.
+	// Load the offline index into memory for access by
+	// opening the index.json file and decoding the
+	// data into the index variable.
 	i := make(map[int]string)
 
 	f, err := os.Open("index.json")
@@ -66,29 +56,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	//for k, v := range i {
-	//	fmt.Printf("%d: %s\n\n", k, v)
-	//}
-
-	// Next, parse argument to program which will be the search term.
-	// Search index for matching comics.
-	// For each match, write URL and transcript to output with newlines
-	// between each match..
-
 	// Argument searchTerm will be the argument passed in by the
 	// user of this program.
-	//
 	// Ex: `xkcd sheep` -> searchTerm == "sheep"
-	//
-	// To start, offer search based on comic number.
-	// Ex: `xkcd 275` -> searchTerm == "275"
 	err = search.SearchIndex(searchTerm, i)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("Goodbye!\n")
 	os.Exit(0)
 }
 
