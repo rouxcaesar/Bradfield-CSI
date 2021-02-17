@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
@@ -17,30 +18,23 @@ import (
 // response body payload.
 
 func main() {
-	fmt.Printf("Hi from main!\n\n")
+	// Check if user wishes to view the help display.
+	if os.Args[1] == "--help" {
+		printHelp()
+		os.Exit(0)
+	}
 
-	// Check args provided to program and grab search term.
-	// searchTerm, err := processArgs()
-	// if err != nil {
-	//   fmt.Println(err)
-	//   os.Exit(1)
-	// }
-	//
-	// // Below check represents printing help statement.
-	// // Could be better, don't want `nil` value to represent "--help".
-	// if !searchTerm {
-	//   os.Exit(0)
-	// }
+	// Check args provided to program and grab search term if provided one.
+	searchTerm, err := processArgs()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
 	// Check if offline index exists.
 	// If not, output message to user and build index.
 	// This will involve fetching the URLs, building the index,
 	// and saving to a file.
-
-	// 3) Next, parse argument to program which will be the search term.
-	//    Search index for matching comics.
-	//    For each match, write URL and transcript to output with newlines
-	//    between each match..
 
 	if !index.IndexExists() {
 
@@ -76,6 +70,11 @@ func main() {
 		fmt.Printf("%d: %s\n\n", k, v)
 	}
 
+	// Next, parse argument to program which will be the search term.
+	// Search index for matching comics.
+	// For each match, write URL and transcript to output with newlines
+	// between each match..
+
 	// Argument searchTerm will be the argument passed in by the
 	// user of this program.
 	//
@@ -83,19 +82,28 @@ func main() {
 	//
 	// To start, offer search based on comic number.
 	// Ex: `xkcd 275` -> searchTerm == "275"
-	searchTerm := "Baaaahhhhh"
+	//searchTerm = "Baaaahhhhh"
 	search.SearchIndex(searchTerm)
 
 	fmt.Printf("Goodbye!\n")
 }
 
+func printHelp() {
+	fmt.Printf("xkcd - Search for xkcd comics with a provided search term\n\n")
+	fmt.Printf("Usage: xkcd <string>\n\n")
+	fmt.Printf("The search term can either be a number or a string of characters.\n")
+	fmt.Printf("If it's a number, the program will search for the comics for one with the matching number based on the xkcd archive.\n")
+	fmt.Printf("If it's a string of characters, the program will search for comics whose transcript contains the string.\n\n")
+}
+
 func processArgs() (string, error) {
-	if len(os.Args) > 2 {
-		return nil, errors.New("too many arguments provided, please see --help")
+	n := len(os.Args)
+
+	if n < 1 {
+		return "", errors.New("no search term provided, please see --help")
+	} else if n > 2 {
+		return "", errors.New("too many arguments provided, please see --help")
 	}
 
-	if os.Args[1] == "--help" {
-		printHelp()
-		return nil, nil
-	}
+	return os.Args[1], nil
 }
