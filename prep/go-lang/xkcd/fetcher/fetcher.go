@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"sync"
 
 	"github.com/pkg/errors"
 )
@@ -14,7 +13,10 @@ import (
 // The current number of xkcd comics.
 // TODO: Make this variable "discoverable" through
 //       a network request to the xkcd website.
-const maxComics = 2426
+const (
+	maxComics        = 500
+	concurrencyLimit = 20
+)
 
 type Comic struct {
 	Month      string `json:"month"`
@@ -34,17 +36,28 @@ func Fetch() error {
 	fmt.Printf("Hi from Fetch!\n\n")
 
 	var req string
-	var wg sync.WaitGroup
-	messages := make(chan Comic, 10)
-	done := make(chan bool)
-	errs := make(chan error)
-	wgDone := make(chan bool)
+	//var wg sync.WaitGroup
+	msgCount := 0
+	httpResp := make(chan *http.Response)
+	messages := make(chan Comic, 25)
+	//done := make(chan bool)
+	//errs := make(chan error)
+	semaphoreChan := make(chan struct{}, concurrencyLimit)
+	//wgDone := make(chan bool)
 	index := make(map[int]string)
+
+	defer func() {
+		close(httpResp)
+		close(messages)
+	}()
 
 	for i := 1; i <= maxComics; i++ {
 		//for i := 1; i <= 5; i++ {
 		// We increment the wait group for each goroutine.
-		wg.Add(1)
+		// Wait groups won't help here b/c we're making concurrent
+		// network requests, each of which require an open file descriptor.
+		// Instead, we need to use a semaphore.
+		//wg.Add(1)
 
 		// Spin off a separate producer goroutine to handle:
 		//   - making a network request for a comic
@@ -57,7 +70,8 @@ func Fetch() error {
 			fmt.Printf("In producer goroutine %d\n\n", i)
 
 			// We decrement the wait group once the goroutine is finished.
-			defer wg.Done()
+			//defer wg.Done()
+			semaphoreChan <- struct{}{}
 
 			req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
 
@@ -65,69 +79,104 @@ func Fetch() error {
 			if err != nil {
 				// Need to send error into error channel
 				fmt.Printf("err: %v\n", err)
-				errs <- errors.Wrap(err, "failed to make GET request for xkcd comic")
+				fmt.Printf("URL: %s\n\n", req)
+				//errs <- errors.Wrap(err, "failed to make GET request for xkcd comic")
 				//return errors.Wrap(err, "failed to make GET request for xkcd comic")
 			}
 
-			// Read JSON payload from response.
-			data, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				// Need to send error into error channel
-				fmt.Printf("err: %v\n", err)
-				errs <- errors.Wrap(err, "failed to read body of response")
-				//return errors.Wrap(err, "failed to read body of response")
-			}
+			httpResp <- resp
 
-			var comic Comic
-			err = json.Unmarshal(data, &comic)
-
-			// Pass constructed comic instance into channel for consumer
-			// goroutine to process.
-			messages <- comic
+			<-semaphoreChan
 		}(i)
 	}
+
+	// Read JSON payload from response.
+	//data, err := ioutil.ReadAll(resp.Body)
+	//if err != nil {
+	//	// Need to send error into error channel
+	//	fmt.Printf("err: %v\n", err)
+	//	errs <- errors.Wrap(err, "failed to read body of response")
+	//	//return errors.Wrap(err, "failed to read body of response")
+	//}
 
 	// Need to create a select stmt to listen to two channels:
 	//  1) For completion of wait group (new channel and goroutine)
 	//  2) For message from error channel
 	// Block until all of the above goroutines finish.
-	go func() {
-		fmt.Printf("In wait group goroutine\n\n")
-		wg.Wait()
-		close(wgDone)
-	}()
+	//	go func() {
+	//		fmt.Printf("In wait group goroutine\n\n")
+	//		wg.Wait()
+	//		close(wgDone)
+	//	}()
 
-	select {
-	case <-wgDone:
-		break
-	case e := <-errs:
-		close(errs)
-		return e
-	}
+	//select {
+	//case <-wgDone:
+	//	break
+	//case e := <-errs:
+	//	close(errs)
+	//	return e
+	//}
 
 	// Close the channel to signal that we are done using it.
 	// We can do this even before reading message from the channel.
-	close(messages)
-	fmt.Printf("Done with for loop\n\n")
+	//close(httpResp)
+	//close(messages)
 
 	// This consumer goroutine reads messages off the channel and builds the
 	// index map.
 	// Maps are not safe for concurrency by themselves, so we couldn't have
 	// the producer goroutines update the map.
 	// With this approach, the map is updated in a sequential manner.
-	go func() {
-		fmt.Printf("Inside consumer goroutine\n\n")
-		for c := range messages {
-			index[c.Num] = c.Transcript
+	//go func() {
+	for {
+		//fmt.Printf("Inside consumer goroutine\n\n")
+
+		r := <-httpResp
+		msgCount += 1
+		var comic Comic
+
+		// Read JSON payload from response.
+		data, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			// Need to send error into error channel
+			fmt.Printf("err: %v\n", err)
+			fmt.Printf("data: %v\n\n", data)
+			//	errs <- errors.Wrap(err, "failed to read body of response")
+			return errors.Wrap(err, "failed to read body of response")
 		}
+
+		// FAILURE: Error when we try to unmarshal the data and it
+		// contains a bad character.
+		//err := json.NewDecoder(r.Body).Decode(&comic)
+		err = json.Unmarshal(data, &comic)
+		if err != nil {
+			// Need to send error into error channel
+			fmt.Printf("err: %v\n", err)
+			fmt.Printf("data: %v\n\n", data)
+			fmt.Printf("msgCount: %d\n\n", msgCount)
+			return errors.Wrap(err, "failed to unmarshal JSON")
+		}
+
+		// Pass constructed comic instance into channel for consumer
+		// goroutine to process.
+		//messages <- comic
+
+		//msg := <-messages
+		//for c := range messages {
+		index[comic.Num] = comic.Transcript
+		//}
 
 		// Once we have finished reading all the messages on the channel,
 		// we send a message on the done channel to indicate that we are
 		// finished building the index.
-		done <- true
-	}()
+		//	done <- true
+		if msgCount >= maxComics {
+			break
+		}
+	}
+	//}()
 
-	<-done
+	//<-done
 
 	fmt.Printf("About to create file\n\n")
 
