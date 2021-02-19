@@ -14,7 +14,7 @@ import (
 // The current number of xkcd comics.
 // TODO: Make this variable "discoverable" through
 //       a network request to the xkcd website.
-const maxComics = 2425
+const maxComics = 2426
 
 type Comic struct {
 	Month      string `json:"month"`
@@ -35,15 +35,14 @@ func Fetch() error {
 
 	var req string
 	var wg sync.WaitGroup
-	messages := make(chan Comic, maxComics)
+	messages := make(chan Comic, 10)
 	done := make(chan bool)
 	errs := make(chan error)
 	wgDone := make(chan bool)
 	index := make(map[int]string)
 
-	//for i := 1; i <= maxComics; i++ {
-	for i := 1; i <= 5; i++ {
-		fmt.Printf("In for loop\n\n")
+	for i := 1; i <= maxComics; i++ {
+		//for i := 1; i <= 5; i++ {
 		// We increment the wait group for each goroutine.
 		wg.Add(1)
 
@@ -65,6 +64,7 @@ func Fetch() error {
 			resp, err := http.Get(req)
 			if err != nil {
 				// Need to send error into error channel
+				fmt.Printf("err: %v\n", err)
 				errs <- errors.Wrap(err, "failed to make GET request for xkcd comic")
 				//return errors.Wrap(err, "failed to make GET request for xkcd comic")
 			}
@@ -73,6 +73,7 @@ func Fetch() error {
 			data, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				// Need to send error into error channel
+				fmt.Printf("err: %v\n", err)
 				errs <- errors.Wrap(err, "failed to read body of response")
 				//return errors.Wrap(err, "failed to read body of response")
 			}
