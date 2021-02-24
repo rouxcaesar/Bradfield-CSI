@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 
@@ -14,8 +15,15 @@ import (
 // TODO: Make this variable "discoverable" through
 //       a network request to the xkcd website.
 const (
-	maxComics        = 500
-	concurrencyLimit = 20
+	// Values below are the current limits for requests to xkcd website.
+	//
+	// If maxComics is greater than 400, we run into 404: Not Found errors being
+	// returned by the web server.
+	//
+	// If concurrencyLimit is greater, we have weird situations in which not all the comics
+	// are properly retrieved and stored - searches of index return fewer matches than there should be.
+	maxComics        = 400
+	concurrencyLimit = 10
 )
 
 type Comic struct {
@@ -67,13 +75,14 @@ func Fetch() error {
 		// involving variable scope and for loops.
 		// Reference: https://dev.to/kkentzo/the-golang-for-loop-gotcha-1n35
 		go func(i int) {
-			fmt.Printf("In producer goroutine %d\n\n", i)
+			//fmt.Printf("In producer goroutine %d\n\n", i)
 
 			// We decrement the wait group once the goroutine is finished.
 			//defer wg.Done()
 			semaphoreChan <- struct{}{}
 
 			req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
+			log.Printf("req: %s", req)
 
 			resp, err := http.Get(req)
 			if err != nil {
@@ -150,12 +159,21 @@ func Fetch() error {
 		//err := json.NewDecoder(r.Body).Decode(&comic)
 		err = json.Unmarshal(data, &comic)
 		if err != nil {
-			// Need to send error into error channel
-			fmt.Printf("err: %v\n", err)
-			fmt.Printf("data: %v\n\n", data)
-			fmt.Printf("msgCount: %d\n\n", msgCount)
+			log.Printf("msgCount: %d", msgCount)
+			log.Printf("error decoding response: %v", err)
+			if e, ok := err.(*json.SyntaxError); ok {
+				log.Printf("syntax error at byte offset %d", e.Offset)
+			}
+			log.Printf("response: %q", data)
 			return errors.Wrap(err, "failed to unmarshal JSON")
 		}
+		//if err != nil {
+		//	// Need to send error into error channel
+		//	fmt.Printf("err: %v\n", err)
+		//	fmt.Printf("data: %v\n\n", data)
+		//	fmt.Printf("msgCount: %d\n\n", msgCount)
+		//	return errors.Wrap(err, "failed to unmarshal JSON")
+		//}
 
 		// Pass constructed comic instance into channel for consumer
 		// goroutine to process.
