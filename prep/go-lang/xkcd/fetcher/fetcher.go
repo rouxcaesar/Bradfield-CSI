@@ -22,8 +22,8 @@ const (
 	//
 	// If concurrencyLimit is greater, we have weird situations in which not all the comics
 	// are properly retrieved and stored - searches of index return fewer matches than there should be.
-	maxComics        = 400
-	concurrencyLimit = 10
+	maxComics        = 2429
+	concurrencyLimit = 2
 )
 
 type Comic struct {
@@ -44,6 +44,91 @@ func Fetch() error {
 	fmt.Printf("Hi from Fetch!\n\n")
 
 	var req string
+	index := make(map[int]string)
+
+	for i := 1; i <= maxComics; i++ {
+		// There is no comic number 404, it simply returns a 404: Not Found response.
+		// This could be the underlying issue causing my concurrent approach to fail!
+		if i == 404 {
+			continue
+		}
+
+		req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
+		//log.Printf("req: %s", req)
+
+		resp, err := http.Get(req)
+		if err != nil {
+			log.Printf("err: %v\n", err)
+			log.Printf("URL: %s\n\n", req)
+			return errors.Wrap(err, "failed to make GET request for xkcd comic")
+		}
+
+		var comic Comic
+
+		// Read JSON payload from response.
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			log.Printf("err: %v\n", err)
+			log.Printf("data: %v\n\n", data)
+			//return errors.Wrap(err, "failed to read body of response")
+		}
+		// We need to close the response Body to actually close the connection.
+		// If we don't do this after we're done with the response, we will
+		// run out of available connections and get "tcp look: no host" errors.
+		resp.Body.Close()
+
+		// FAILURE: Error when we try to unmarshal the data and it
+		// contains a bad character.
+		//err := json.NewDecoder(r.Body).Decode(&comic)
+		err = json.Unmarshal(data, &comic)
+		if err != nil {
+			log.Printf("i: %d", i)
+			log.Printf("error decoding response: %v", err)
+			if e, ok := err.(*json.SyntaxError); ok {
+				log.Printf("syntax error at byte offset %d", e.Offset)
+			}
+			log.Printf("response: %q", data)
+			return errors.Wrap(err, "failed to unmarshal JSON")
+		}
+
+		index[comic.Num] = comic.Transcript
+	}
+
+	fmt.Printf("About to create file\n\n")
+
+	// Now save the contents of the index variable to a file
+	// to make it an "offline" index.
+	// This should be moved to the BuildIndex() func in the index package.
+	file, err := os.Create("index.json")
+	if err != nil {
+		return errors.Wrap(err, "failed to create file index.json")
+	}
+	defer file.Close()
+
+	if err := json.NewEncoder(file).Encode(&index); err != nil {
+		return errors.Wrap(err, "failed to encode index into index.json")
+	}
+
+	fmt.Printf("Done with Fetcher func!\n\n")
+	return nil
+}
+
+// ConcurrentFetch uses goroutines to perform several network calls and handle
+// their responses independently in order to speed up the fetching of comics.
+//
+// This function is currently a no-op due to some issues with the web server backing
+// the xkcd website.
+//
+// After making some updates to the Fetch() code, I believe the ConcurrentFetch approach
+// is possible with a few modification:
+//		- Each goroutine needs to make a GET request, read the response body, decode/unmarshal the JSON,
+//      and then close it before returning.
+//    - Each goroutine can pass the decoded/unmarshalled JSON into a channel.
+//    - Outside of the for loop, we can use an infinite for loop to read from the channel and update the index.
+func ConcurrentFetch() error {
+	fmt.Printf("Hi from Fetch!\n\n")
+
+	var req string
 	//var wg sync.WaitGroup
 	msgCount := 0
 	httpResp := make(chan *http.Response)
@@ -60,7 +145,6 @@ func Fetch() error {
 	}()
 
 	for i := 1; i <= maxComics; i++ {
-		//for i := 1; i <= 5; i++ {
 		// We increment the wait group for each goroutine.
 		// Wait groups won't help here b/c we're making concurrent
 		// network requests, each of which require an open file descriptor.
@@ -82,7 +166,7 @@ func Fetch() error {
 			semaphoreChan <- struct{}{}
 
 			req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
-			log.Printf("req: %s", req)
+			//log.Printf("req: %s", req)
 
 			resp, err := http.Get(req)
 			if err != nil {

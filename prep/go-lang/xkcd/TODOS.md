@@ -13,3 +13,8 @@
 [ ] - Stretch: If search term yields many results (say > 5), return number of matches and ask user if they wish to view them all or cancel  
 [ ] - Stretch: Write a Makefile for building binary in a bin folder, removing binary, and testing binary   
 [ ] - Nit: Update .gitignore to ignore bin folders   
+
+
+# Next Step  
+
+- Clean up and reorganize code, then post for review!
