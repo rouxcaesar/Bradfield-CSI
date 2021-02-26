@@ -30,6 +30,11 @@ func main() {
 	if !index.IndexExists() {
 		fmt.Printf("Offline index not found, building index now\n\n")
 
+		// Add flag parsing to offer concurrent fetching?
+		// --concurrent
+		// Concurrent approach is giving unexpected results, going to
+		// make this a stretch goal for the future.
+		//err := fetcher.ConcurrentFetch()
 		err := fetcher.Fetch()
 		if err != nil {
 			fmt.Println(err)

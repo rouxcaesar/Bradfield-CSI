@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/pkg/errors"
 )
@@ -23,7 +24,7 @@ const (
 	// If concurrencyLimit is greater, we have weird situations in which not all the comics
 	// are properly retrieved and stored - searches of index return fewer matches than there should be.
 	maxComics        = 2429
-	concurrencyLimit = 2
+	concurrencyLimit = 10
 )
 
 type Comic struct {
@@ -38,6 +39,91 @@ type Comic struct {
 	Img        string `json:"img"`
 	Title      string `json:"title"`
 	Day        string `json:"day"`
+}
+
+func ConcurrentFetch() error {
+	fmt.Printf("Hi from ConcurrentFetch!\n\n")
+
+	var req string
+	index := make(map[int]string)
+	//	dataChan := make(chan []byte, 20)
+	comicChan := make(chan Comic, 20)
+	var wg sync.WaitGroup
+
+	fmt.Printf("Starting goroutines\n\n")
+
+	for i := 1; i <= 10; i++ {
+		if i == 404 {
+			continue
+		}
+
+		wg.Add(1)
+
+		go func(num int) {
+			defer wg.Done()
+			req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", num)
+			fmt.Printf("Req: %s\n", req)
+
+			resp, err := http.Get(req)
+			if err != nil {
+				log.Printf("failed to make GET request - err: %v\n", err)
+				log.Printf("URL: %s\n\n", req)
+				//return errors.Wrap(err, "failed to make GET request for xkcd comic")
+			}
+
+			//if resp.StatusCode != http.StatusOK {
+			//	resp.Body.Close()
+			//	log.Printf("GET request returned non-OK status code for comic %d", num)
+			//}
+
+			data, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				log.Printf("failed to read response body - err: %v\n", err)
+			}
+			resp.Body.Close()
+
+			var comic Comic
+			err = json.Unmarshal(data, &comic)
+			if err != nil {
+				log.Printf("error decoding response: %v", err)
+				if e, ok := err.(*json.SyntaxError); ok {
+					log.Printf("syntax error at byte offset %d", e.Offset)
+				}
+				log.Printf("response: %q", data)
+				log.Println("failed to unmarshal JSON")
+				//return errors.Wrap(err, "failed to unmarshal JSON")
+			}
+
+			comicChan <- comic
+		}(i)
+	}
+
+	wg.Wait()
+	close(comicChan)
+
+	for c := range comicChan {
+		fmt.Printf("comic %d\n%s\n\n", c.Num, c.Transcript)
+		index[c.Num] = c.Transcript
+	}
+
+	fmt.Printf("About to create file\n\n")
+
+	// Now save the contents of the index variable to a file
+	// to make it an "offline" index.
+	// This should be moved to the BuildIndex() func in the index package.
+	file, err := os.Create("index.json")
+	if err != nil {
+		return errors.Wrap(err, "failed to create file index.json")
+	}
+	defer file.Close()
+
+	if err := json.NewEncoder(file).Encode(&index); err != nil {
+		return errors.Wrap(err, "failed to encode index into index.json")
+	}
+
+	fmt.Printf("Done with Fetcher func!\n\n")
+	return nil
+
 }
 
 func Fetch() error {
@@ -61,6 +147,11 @@ func Fetch() error {
 			log.Printf("err: %v\n", err)
 			log.Printf("URL: %s\n\n", req)
 			return errors.Wrap(err, "failed to make GET request for xkcd comic")
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			log.Printf("GET request returned non-OK status code for comic %d", i)
 		}
 
 		var comic Comic
@@ -125,176 +216,176 @@ func Fetch() error {
 //      and then close it before returning.
 //    - Each goroutine can pass the decoded/unmarshalled JSON into a channel.
 //    - Outside of the for loop, we can use an infinite for loop to read from the channel and update the index.
-func ConcurrentFetch() error {
-	fmt.Printf("Hi from Fetch!\n\n")
-
-	var req string
-	//var wg sync.WaitGroup
-	msgCount := 0
-	httpResp := make(chan *http.Response)
-	messages := make(chan Comic, 25)
-	//done := make(chan bool)
-	//errs := make(chan error)
-	semaphoreChan := make(chan struct{}, concurrencyLimit)
-	//wgDone := make(chan bool)
-	index := make(map[int]string)
-
-	defer func() {
-		close(httpResp)
-		close(messages)
-	}()
-
-	for i := 1; i <= maxComics; i++ {
-		// We increment the wait group for each goroutine.
-		// Wait groups won't help here b/c we're making concurrent
-		// network requests, each of which require an open file descriptor.
-		// Instead, we need to use a semaphore.
-		//wg.Add(1)
-
-		// Spin off a separate producer goroutine to handle:
-		//   - making a network request for a comic
-		//   - parsing the response body
-		//   - unmarshalling response body int a comic struct instance
-		// The variable i is passed into the IIFE to avoid the common bug
-		// involving variable scope and for loops.
-		// Reference: https://dev.to/kkentzo/the-golang-for-loop-gotcha-1n35
-		go func(i int) {
-			//fmt.Printf("In producer goroutine %d\n\n", i)
-
-			// We decrement the wait group once the goroutine is finished.
-			//defer wg.Done()
-			semaphoreChan <- struct{}{}
-
-			req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
-			//log.Printf("req: %s", req)
-
-			resp, err := http.Get(req)
-			if err != nil {
-				// Need to send error into error channel
-				fmt.Printf("err: %v\n", err)
-				fmt.Printf("URL: %s\n\n", req)
-				//errs <- errors.Wrap(err, "failed to make GET request for xkcd comic")
-				//return errors.Wrap(err, "failed to make GET request for xkcd comic")
-			}
-
-			httpResp <- resp
-
-			<-semaphoreChan
-		}(i)
-	}
-
-	// Read JSON payload from response.
-	//data, err := ioutil.ReadAll(resp.Body)
-	//if err != nil {
-	//	// Need to send error into error channel
-	//	fmt.Printf("err: %v\n", err)
-	//	errs <- errors.Wrap(err, "failed to read body of response")
-	//	//return errors.Wrap(err, "failed to read body of response")
-	//}
-
-	// Need to create a select stmt to listen to two channels:
-	//  1) For completion of wait group (new channel and goroutine)
-	//  2) For message from error channel
-	// Block until all of the above goroutines finish.
-	//	go func() {
-	//		fmt.Printf("In wait group goroutine\n\n")
-	//		wg.Wait()
-	//		close(wgDone)
-	//	}()
-
-	//select {
-	//case <-wgDone:
-	//	break
-	//case e := <-errs:
-	//	close(errs)
-	//	return e
-	//}
-
-	// Close the channel to signal that we are done using it.
-	// We can do this even before reading message from the channel.
-	//close(httpResp)
-	//close(messages)
-
-	// This consumer goroutine reads messages off the channel and builds the
-	// index map.
-	// Maps are not safe for concurrency by themselves, so we couldn't have
-	// the producer goroutines update the map.
-	// With this approach, the map is updated in a sequential manner.
-	//go func() {
-	for {
-		//fmt.Printf("Inside consumer goroutine\n\n")
-
-		r := <-httpResp
-		msgCount += 1
-		var comic Comic
-
-		// Read JSON payload from response.
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			// Need to send error into error channel
-			fmt.Printf("err: %v\n", err)
-			fmt.Printf("data: %v\n\n", data)
-			//	errs <- errors.Wrap(err, "failed to read body of response")
-			return errors.Wrap(err, "failed to read body of response")
-		}
-
-		// FAILURE: Error when we try to unmarshal the data and it
-		// contains a bad character.
-		//err := json.NewDecoder(r.Body).Decode(&comic)
-		err = json.Unmarshal(data, &comic)
-		if err != nil {
-			log.Printf("msgCount: %d", msgCount)
-			log.Printf("error decoding response: %v", err)
-			if e, ok := err.(*json.SyntaxError); ok {
-				log.Printf("syntax error at byte offset %d", e.Offset)
-			}
-			log.Printf("response: %q", data)
-			return errors.Wrap(err, "failed to unmarshal JSON")
-		}
-		//if err != nil {
-		//	// Need to send error into error channel
-		//	fmt.Printf("err: %v\n", err)
-		//	fmt.Printf("data: %v\n\n", data)
-		//	fmt.Printf("msgCount: %d\n\n", msgCount)
-		//	return errors.Wrap(err, "failed to unmarshal JSON")
-		//}
-
-		// Pass constructed comic instance into channel for consumer
-		// goroutine to process.
-		//messages <- comic
-
-		//msg := <-messages
-		//for c := range messages {
-		index[comic.Num] = comic.Transcript
-		//}
-
-		// Once we have finished reading all the messages on the channel,
-		// we send a message on the done channel to indicate that we are
-		// finished building the index.
-		//	done <- true
-		if msgCount >= maxComics {
-			break
-		}
-	}
-	//}()
-
-	//<-done
-
-	fmt.Printf("About to create file\n\n")
-
-	// Now save the contents of the index variable to a file
-	// to make it an "offline" index.
-	// This should be moved to the BuildIndex() func in the index package.
-	file, err := os.Create("index.json")
-	if err != nil {
-		return errors.Wrap(err, "failed to create file index.json")
-	}
-	defer file.Close()
-
-	if err := json.NewEncoder(file).Encode(&index); err != nil {
-		return errors.Wrap(err, "failed to encode index into index.json")
-	}
-
-	fmt.Printf("Done with Fetcher func!\n\n")
-	return nil
-}
+//func ConcurrentFetch() error {
+//	fmt.Printf("Hi from Fetch!\n\n")
+//
+//	var req string
+//	//var wg sync.WaitGroup
+//	msgCount := 0
+//	httpResp := make(chan *http.Response)
+//	messages := make(chan Comic, 25)
+//	//done := make(chan bool)
+//	//errs := make(chan error)
+//	semaphoreChan := make(chan struct{}, concurrencyLimit)
+//	//wgDone := make(chan bool)
+//	index := make(map[int]string)
+//
+//	defer func() {
+//		close(httpResp)
+//		close(messages)
+//	}()
+//
+//	for i := 1; i <= maxComics; i++ {
+//		// We increment the wait group for each goroutine.
+//		// Wait groups won't help here b/c we're making concurrent
+//		// network requests, each of which require an open file descriptor.
+//		// Instead, we need to use a semaphore.
+//		//wg.Add(1)
+//
+//		// Spin off a separate producer goroutine to handle:
+//		//   - making a network request for a comic
+//		//   - parsing the response body
+//		//   - unmarshalling response body int a comic struct instance
+//		// The variable i is passed into the IIFE to avoid the common bug
+//		// involving variable scope and for loops.
+//		// Reference: https://dev.to/kkentzo/the-golang-for-loop-gotcha-1n35
+//		go func(i int) {
+//			//fmt.Printf("In producer goroutine %d\n\n", i)
+//
+//			// We decrement the wait group once the goroutine is finished.
+//			//defer wg.Done()
+//			semaphoreChan <- struct{}{}
+//
+//			req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
+//			//log.Printf("req: %s", req)
+//
+//			resp, err := http.Get(req)
+//			if err != nil {
+//				// Need to send error into error channel
+//				fmt.Printf("err: %v\n", err)
+//				fmt.Printf("URL: %s\n\n", req)
+//				//errs <- errors.Wrap(err, "failed to make GET request for xkcd comic")
+//				//return errors.Wrap(err, "failed to make GET request for xkcd comic")
+//			}
+//
+//			httpResp <- resp
+//
+//			<-semaphoreChan
+//		}(i)
+//	}
+//
+//	// Read JSON payload from response.
+//	//data, err := ioutil.ReadAll(resp.Body)
+//	//if err != nil {
+//	//	// Need to send error into error channel
+//	//	fmt.Printf("err: %v\n", err)
+//	//	errs <- errors.Wrap(err, "failed to read body of response")
+//	//	//return errors.Wrap(err, "failed to read body of response")
+//	//}
+//
+//	// Need to create a select stmt to listen to two channels:
+//	//  1) For completion of wait group (new channel and goroutine)
+//	//  2) For message from error channel
+//	// Block until all of the above goroutines finish.
+//	//	go func() {
+//	//		fmt.Printf("In wait group goroutine\n\n")
+//	//		wg.Wait()
+//	//		close(wgDone)
+//	//	}()
+//
+//	//select {
+//	//case <-wgDone:
+//	//	break
+//	//case e := <-errs:
+//	//	close(errs)
+//	//	return e
+//	//}
+//
+//	// Close the channel to signal that we are done using it.
+//	// We can do this even before reading message from the channel.
+//	//close(httpResp)
+//	//close(messages)
+//
+//	// This consumer goroutine reads messages off the channel and builds the
+//	// index map.
+//	// Maps are not safe for concurrency by themselves, so we couldn't have
+//	// the producer goroutines update the map.
+//	// With this approach, the map is updated in a sequential manner.
+//	//go func() {
+//	for {
+//		//fmt.Printf("Inside consumer goroutine\n\n")
+//
+//		r := <-httpResp
+//		msgCount += 1
+//		var comic Comic
+//
+//		// Read JSON payload from response.
+//		data, err := ioutil.ReadAll(r.Body)
+//		if err != nil {
+//			// Need to send error into error channel
+//			fmt.Printf("err: %v\n", err)
+//			fmt.Printf("data: %v\n\n", data)
+//			//	errs <- errors.Wrap(err, "failed to read body of response")
+//			return errors.Wrap(err, "failed to read body of response")
+//		}
+//
+//		// FAILURE: Error when we try to unmarshal the data and it
+//		// contains a bad character.
+//		//err := json.NewDecoder(r.Body).Decode(&comic)
+//		err = json.Unmarshal(data, &comic)
+//		if err != nil {
+//			log.Printf("msgCount: %d", msgCount)
+//			log.Printf("error decoding response: %v", err)
+//			if e, ok := err.(*json.SyntaxError); ok {
+//				log.Printf("syntax error at byte offset %d", e.Offset)
+//			}
+//			log.Printf("response: %q", data)
+//			return errors.Wrap(err, "failed to unmarshal JSON")
+//		}
+//		//if err != nil {
+//		//	// Need to send error into error channel
+//		//	fmt.Printf("err: %v\n", err)
+//		//	fmt.Printf("data: %v\n\n", data)
+//		//	fmt.Printf("msgCount: %d\n\n", msgCount)
+//		//	return errors.Wrap(err, "failed to unmarshal JSON")
+//		//}
+//
+//		// Pass constructed comic instance into channel for consumer
+//		// goroutine to process.
+//		//messages <- comic
+//
+//		//msg := <-messages
+//		//for c := range messages {
+//		index[comic.Num] = comic.Transcript
+//		//}
+//
+//		// Once we have finished reading all the messages on the channel,
+//		// we send a message on the done channel to indicate that we are
+//		// finished building the index.
+//		//	done <- true
+//		if msgCount >= maxComics {
+//			break
+//		}
+//	}
+//	//}()
+//
+//	//<-done
+//
+//	fmt.Printf("About to create file\n\n")
+//
+//	// Now save the contents of the index variable to a file
+//	// to make it an "offline" index.
+//	// This should be moved to the BuildIndex() func in the index package.
+//	file, err := os.Create("index.json")
+//	if err != nil {
+//		return errors.Wrap(err, "failed to create file index.json")
+//	}
+//	defer file.Close()
+//
+//	if err := json.NewEncoder(file).Encode(&index); err != nil {
+//		return errors.Wrap(err, "failed to encode index into index.json")
+//	}
+//
+//	fmt.Printf("Done with Fetcher func!\n\n")
+//	return nil
+//}
