@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -21,53 +20,39 @@ func main() {
 	// Check args provided to program and grab search term if provided one.
 	searchTerm, err := processArgs()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		handleError(err)
 	}
 
 	// Check if offline index exists.
 	// If not, we first build the offline index.
-	if !index.IndexExists() {
+	if !index.Exists() {
 		fmt.Printf("Offline index not found, building index now\n\n")
 
-		// Add flag parsing to offer concurrent fetching?
-		// --concurrent
-		// Concurrent approach is giving unexpected results, going to
-		// make this a stretch goal for the future.
 		//err := fetcher.ConcurrentFetch()
-		err := fetcher.Fetch()
+		comics, err := fetcher.Fetch()
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			handleError(err)
 		}
 
-		index.BuildIndex()
+		err = index.Build(comics)
+		if err != nil {
+			handleError(err)
+		}
+
 		fmt.Printf("Offline index built, ready to search\n\n")
 	}
 
-	// Load the offline index into memory for access by
-	// opening the index.json file and decoding the
-	// data into the index variable.
-	i := make(map[int]string)
-
-	f, err := os.Open("index.json")
+	offlineIndex, err := index.Load()
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if err := json.NewDecoder(f).Decode(&i); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		handleError(err)
 	}
 
 	// Argument searchTerm will be the argument passed in by the
 	// user of this program.
 	// Ex: `xkcd sheep` -> searchTerm == "sheep"
-	err = search.SearchIndex(searchTerm, i)
+	err = search.Index(searchTerm, offlineIndex)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		handleError(err)
 	}
 
 	os.Exit(0)
@@ -91,4 +76,9 @@ func processArgs() (string, error) {
 	}
 
 	return os.Args[1], nil
+}
+
+func handleError(err error) {
+	fmt.Println(err)
+	os.Exit(1)
 }

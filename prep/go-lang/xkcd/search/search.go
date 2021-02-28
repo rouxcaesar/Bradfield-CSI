@@ -12,10 +12,10 @@ const (
 	urlSuffix string = "/info.0.json"
 )
 
-// SearchIndex takes a term provided by the user and
+// Index takes a term provided by the user and
 // searches the index for any entries (comics) whose
 // comic number or transcript match the term.
-func SearchIndex(searchTerm string, index map[int]string) error {
+func Index(searchTerm string, index map[int]string) error {
 	//fmt.Printf("searchTerm: %s\n\n", searchTerm)
 
 	num, err := strconv.Atoi(searchTerm)
@@ -34,7 +34,7 @@ func SearchIndex(searchTerm string, index map[int]string) error {
 func searchTranscripts(searchTerm string, index map[int]string) error {
 	found := false
 
-	// Search every comic in the index for a match with provided searchTerm.
+	// Search every comic in the index for a match in with provided searchTerm.
 	for k, v := range index {
 		if strings.Contains(v, searchTerm) {
 			printMatch(k, v)
@@ -43,7 +43,7 @@ func searchTranscripts(searchTerm string, index map[int]string) error {
 	}
 
 	if !found {
-		return errors.New("No comic was found for provided search term\n\n")
+		return errors.New("no comic was found for provided search term")
 	}
 
 	return nil

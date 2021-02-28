@@ -18,16 +18,14 @@ import (
 //       a network request to the xkcd website.
 const (
 	// Values below are the current limits for requests to xkcd website.
-	//
-	// If maxComics is greater than 400, we run into 404: Not Found errors being
-	// returned by the web server.
-	//
 	// If concurrencyLimit is greater, we have weird situations in which not all the comics
 	// are properly retrieved and stored - searches of index return fewer matches than there should be.
 	maxComics        = 2429
 	concurrencyLimit = 10
 )
 
+// Comic is used to store the decoded JSON data representing a comic as returned in the response
+// from a request to the xkcd website made by Fetch().
 type Comic struct {
 	Month      string `json:"month"`
 	Num        int    `json:"num"`
@@ -42,6 +40,10 @@ type Comic struct {
 	Day        string `json:"day"`
 }
 
+// ConcurrentFetch is a WIP version of Fetch() that uses concurrency to make concurrent requests
+// to the xkcd website for comic data.
+// The goal is to speed up the slowest portion of this program which is making all the network requests
+// and handling the responses.
 func ConcurrentFetch() error {
 	fmt.Printf("Hi from ConcurrentFetch!\n\n")
 
@@ -127,13 +129,17 @@ func ConcurrentFetch() error {
 
 }
 
-func Fetch() error {
+// Fetch makes requests to the xkcd website for all existing comics.
+// It will take the JSON response for each and store the needed data
+// into a map, which will be stored in an offline index using the
+// index package.
+func Fetch() (map[int]string, error) {
 	fmt.Printf("Hi from Fetch!\n\n")
 
 	go spinner(100 * time.Millisecond)
 
 	var req string
-	index := make(map[int]string)
+	comics := make(map[int]string)
 
 	for i := 1; i <= maxComics; i++ {
 		// There is no comic number 404, it simply returns a 404: Not Found response.
@@ -143,13 +149,11 @@ func Fetch() error {
 		}
 
 		req = fmt.Sprintf("https://xkcd.com/%d/info.0.json", i)
-		//log.Printf("req: %s", req)
-
 		resp, err := http.Get(req)
 		if err != nil {
 			log.Printf("err: %v\n", err)
 			log.Printf("URL: %s\n\n", req)
-			return errors.Wrap(err, "failed to make GET request for xkcd comic")
+			return nil, errors.Wrap(err, "failed to make GET request for xkcd comic")
 		}
 
 		if resp.StatusCode != http.StatusOK {
@@ -164,7 +168,7 @@ func Fetch() error {
 		if err != nil {
 			log.Printf("err: %v\n", err)
 			log.Printf("data: %v\n\n", data)
-			return errors.Wrap(err, "failed to read body of response")
+			return nil, errors.Wrap(err, "failed to read body of response")
 		}
 		resp.Body.Close()
 
@@ -176,35 +180,20 @@ func Fetch() error {
 				log.Printf("syntax error at byte offset %d", e.Offset)
 			}
 			log.Printf("response: %q", data)
-			return errors.Wrap(err, "failed to unmarshal JSON")
+			return nil, errors.Wrap(err, "failed to unmarshal JSON")
 		}
 
 		// Sometimes the transcript value in the JSON response is an empty string.
 		// In these cases, use the alt value in the response instead.
 		if comic.Transcript != "" {
-			index[comic.Num] = comic.Transcript
+			comics[comic.Num] = comic.Transcript
 		} else {
-			index[comic.Num] = comic.Alt
+			comics[comic.Num] = comic.Alt
 		}
 	}
 
-	fmt.Printf("About to create file\n\n")
-
-	// Now save the contents of the index variable to a file
-	// to make it an "offline" index.
-	// This should be moved to the BuildIndex() func in the index package.
-	file, err := os.Create("index.json")
-	if err != nil {
-		return errors.Wrap(err, "failed to create file index.json")
-	}
-	defer file.Close()
-
-	if err := json.NewEncoder(file).Encode(&index); err != nil {
-		return errors.Wrap(err, "failed to encode index into index.json")
-	}
-
 	fmt.Printf("Done with Fetcher func!\n\n")
-	return nil
+	return comics, nil
 }
 
 // spinner outputs a visual indicator that the program
