@@ -17,10 +17,9 @@ import (
 // TODO: Make this variable "discoverable" through
 //       a network request to the xkcd website.
 const (
-	// Values below are the current limits for requests to xkcd website.
+	maxComics = 2429
 	// If concurrencyLimit is greater, we have weird situations in which not all the comics
 	// are properly retrieved and stored - searches of index return fewer matches than there should be.
-	maxComics        = 2429
 	concurrencyLimit = 10
 )
 
@@ -44,6 +43,7 @@ type Comic struct {
 // to the xkcd website for comic data.
 // The goal is to speed up the slowest portion of this program which is making all the network requests
 // and handling the responses.
+// This is a strech goal, I'll circle back to flesh this out in a later point in time.
 func ConcurrentFetch() error {
 	fmt.Printf("Hi from ConcurrentFetch!\n\n")
 

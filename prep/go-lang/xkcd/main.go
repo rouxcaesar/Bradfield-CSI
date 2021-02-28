@@ -28,7 +28,6 @@ func main() {
 	if !index.Exists() {
 		fmt.Printf("Offline index not found, building index now\n\n")
 
-		//err := fetcher.ConcurrentFetch()
 		comics, err := fetcher.Fetch()
 		if err != nil {
 			handleError(err)

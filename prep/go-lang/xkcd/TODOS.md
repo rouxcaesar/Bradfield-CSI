@@ -11,9 +11,3 @@
       [X] - Search by terms/text  
 [ ] - Stretch: Make URL fetch logic concurrent with goroutines (producer/consumer)  
 [ ] - Stretch: If search term yields many results (say > 5), return number of matches and ask user if they wish to view them all or cancel  
-[ ] - Nit: Update .gitignore to ignore bin folders   
-
-
-# Next Step  
-
-- Clean up and reorganize code, then post for review!
