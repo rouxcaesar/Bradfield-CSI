@@ -5,6 +5,8 @@ import (
 	"os"
 )
 
+const indexName = "offline-index.json"
+
 // For our offline index of all the xkcd comics, we need
 // a data structure that is suited for search operations
 // on the data it contains.
@@ -27,7 +29,7 @@ func BuildIndex() {
 // IndexExists checks whether the offline index file
 // already exists.
 func IndexExists() bool {
-	info, err := os.Stat("index.json")
+	info, err := os.Stat(indexName)
 
 	if os.IsNotExist(err) {
 		return false
